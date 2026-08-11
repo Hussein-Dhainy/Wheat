@@ -1,0 +1,2 @@
+export const PRELOADER_DELAY_ENABLED = true
+export const PRELOADER_MINIMUM_VISIBLE_MS = 2000

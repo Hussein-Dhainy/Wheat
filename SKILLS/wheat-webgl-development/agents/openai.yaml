@@ -1,0 +1,5 @@
+interface:
+  display_name: "Wheat WebGL Development"
+  short_description: "Build and review the Wheat WebGL experience"
+  default_prompt: "Use $wheat-webgl-development to implement the next Wheat WebGL feature after comparing viable approaches."
+
