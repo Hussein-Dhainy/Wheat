@@ -1,5 +1,8 @@
 import { LandingScene } from './scenes/LandingScene.jsx'
-import { PlaceholderScene } from './scenes/PlaceholderScene.jsx'
+import DNAHelix from './scenes/dna/DNAHelix.jsx'
+import { FieldTrialsScene } from './scenes/field/FieldTrialsScene.jsx'
+import { PredictionScene } from './scenes/prediction/PredictionScene.jsx'
+import { ResultScene } from './scenes/result/ResultScene.jsx'
 
 export const SCENE_REGISTRY = [
   {
@@ -16,15 +19,17 @@ export const SCENE_REGISTRY = [
     id: 'genetics',
     label: 'A diverse beginning',
     chapter: 'Scene 2 · Genetics',
-    description: 'Placeholder geometry for the genetic-foundation scene.',
+    description: 'Fibrous genetic strands exchange paths between two bundles.',
     accent: '#c8dd6c',
-    component: PlaceholderScene,
+    component: DNAHelix,
+    camera: {
+      fov: 42,
+      position: [0, 0 , 6]
+    },
     sceneProps: {
-      background: '#0d3327',
+      background: '#160904',
       sectionBackgrounds: {
-        overview: '#0d3327',
-        variation: '#102d3b',
-        selection: '#302816',
+        overview: '#160904',
       },
       variant: 'genetics',
     },
@@ -33,36 +38,45 @@ export const SCENE_REGISTRY = [
     id: 'prediction',
     label: 'Narrowing the possibilities',
     chapter: 'Scene 3 · Prediction',
-    description: 'Placeholder geometry for the predictive-selection scene.',
+    description: 'Follow one selected wheat plant from its head to its roots.',
     accent: '#f0c45b',
-    component: PlaceholderScene,
+    component: PredictionScene,
+    camera: {
+      fov: 38,
+      position: [0, 3.4, 1.8],
+    },
     sceneProps: {
-      background: '#102c3b',
-      variant: 'prediction',
+      background: '#172316',
     },
   },
   {
     id: 'field',
-    label: 'Proven in the field',
+    label: 'Testing, testing and more testing',
     chapter: 'Scene 4 · Testing',
-    description: 'Placeholder geometry for the real-world field scene.',
+    description: 'Expanded field trials compare candidates across many plots.',
     accent: '#d4d86e',
-    component: PlaceholderScene,
+    component: FieldTrialsScene,
+    camera: {
+      fov: 38,
+      position: [0, 8.2, 0],
+    },
     sceneProps: {
-      background: '#314214',
-      variant: 'field',
+      background: '#172315',
     },
   },
   {
     id: 'result',
-    label: 'One grain remains',
+    label: 'One grain makes it through',
     chapter: 'Scene 5 · Result',
-    description: 'Placeholder geometry for the final-grain scene.',
+    description: 'The final selected wheat grain emerges from the trial journey.',
     accent: '#efb44b',
-    component: PlaceholderScene,
+    component: ResultScene,
+    camera: {
+      fov: 40,
+      position: [0, 0, 6.8],
+    },
     sceneProps: {
-      background: '#35121d',
-      variant: 'result',
+      background: '#14090d',
     },
   },
 ]

@@ -268,6 +268,12 @@ export function LandingSection({ entered }) {
     particleClip.current.setAttribute('cx', svgX)
     particleClip.current.setAttribute('cy', svgY)
     positionTitleParticles(svgX, svgY)
+
+    // Particle drift is transform-based (cheap), but there's no reason to
+    // keep it animating while the cursor is nowhere near the title.
+    const isWithinTitleBounds = svgX >= 0 && svgX <= TITLE_VIEWBOX_WIDTH
+      && svgY >= 0 && svgY <= TITLE_VIEWBOX_HEIGHT
+    title.current?.classList.toggle(styles.spotlightActive, isWithinTitleBounds)
   }
 
   const updateLocalPointer = (event) => {
@@ -291,6 +297,7 @@ export function LandingSection({ entered }) {
     if (!titleParticles.length) return
 
     applyPointerPosition(TITLE_PARKED_POINTER, TITLE_PARKED_POINTER)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [titleParticles])
 
   return (
@@ -306,19 +313,15 @@ export function LandingSection({ entered }) {
       aria-labelledby="landing-title"
       onPointerMove={updateLocalPointer}
       onPointerDown={updateLocalPointer}
+      onPointerLeave={() => applyPointerPosition(TITLE_PARKED_POINTER, TITLE_PARKED_POINTER)}
     >
-      <header className={styles.header}>
-        <span className={styles.mark}>W / 01</span>
-        <span className={styles.chapter}>The wheat journey</span>
-      </header>
-
       <div className={styles.copy}>
         <div
           ref={title}
           className={styles.titleInteraction}
         >
           <h1 id="landing-title" className={styles.visuallyHidden}>
-            Wheat. Reimagined.
+            {TITLE_TEXT}
           </h1>
 
           <svg
@@ -340,8 +343,7 @@ export function LandingSection({ entered }) {
                   y={TITLE_BASELINE}
                   textAnchor="middle"
                 >
-                  <tspan fill="#fff">W</tspan>
-                  <tspan fill="#fff">{TITLE_TEXT.slice(1)}</tspan>
+                  <tspan fill="#fff">{TITLE_TEXT}</tspan>
                 </text>
                 <circle
                   ref={titleReveal}

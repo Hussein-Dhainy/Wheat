@@ -1,0 +1,25 @@
+.navbar {
+  position: fixed;
+  z-index: 16;
+  top: clamp(1rem, 3vh, 1.6rem);
+  left: clamp(1.1rem, 4vw, 2rem);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-0.4rem);
+  transition: opacity 650ms cubic-bezier(0.65, 0, 0.35, 1),
+    transform 650ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar {
+    transition: opacity 200ms linear;
+  }
+}

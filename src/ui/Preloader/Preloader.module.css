@@ -20,7 +20,7 @@
 .content {
   display: grid;
   justify-items: center;
-  width: min(16rem, 70vw);
+  width: min(20rem, 84vw);
 }
 
 .content p {
@@ -31,12 +31,8 @@
   text-transform: uppercase;
 }
 
-.hexagon {
-  width: 2.8rem;
-  aspect-ratio: 1;
-  border: 1px solid rgb(230 191 84 / 78%);
-  clip-path: polygon(25% 6.7%, 75% 6.7%, 100% 50%, 75% 93.3%, 25% 93.3%, 0 50%);
-  animation: hexagon-turn 2.4s ease-in-out infinite;
+.logo {
+  margin-bottom: 1rem;
 }
 
 .track {
@@ -48,27 +44,9 @@
 
 .progress {
   display: block;
-  width: 42%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, #e6bf54, #ac4038, transparent);
-  animation: loading-progress 1.25s ease-in-out infinite;
-}
-
-@keyframes loading-progress {
-  from {
-    transform: translateX(-120%);
-  }
-
-  to {
-    transform: translateX(340%);
-  }
-}
-
-@keyframes hexagon-turn {
-  50% {
-    transform: rotate(60deg) scale(0.88);
-    border-color: rgb(172 64 56 / 80%);
-  }
+  background: linear-gradient(90deg, #e6bf54, #ac4038);
+  transition: width 220ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -76,8 +54,7 @@
     transition: none;
   }
 
-  .hexagon,
   .progress {
-    animation: none;
+    transition: none;
   }
 }

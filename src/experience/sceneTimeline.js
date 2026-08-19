@@ -12,6 +12,18 @@ function assertPositiveLength(value, name) {
   if (value <= 0) throw new RangeError(`${name} must be greater than zero`)
 }
 
+function assertNonnegativeLength(value, name) {
+  assertFiniteNumber(value, name)
+  if (value < 0) throw new RangeError(`${name} must be zero or greater`)
+}
+
+function assertNormalizedProgress(value, name) {
+  assertFiniteNumber(value, name)
+  if (value < 0 || value > 1) {
+    throw new RangeError(`${name} must be between zero and one`)
+  }
+}
+
 function assertTimeline(timeline) {
   if (
     !timeline
@@ -55,6 +67,46 @@ export function compileSceneTimeline(registry) {
       throw new TypeError(`${sceneId}.timeline.sections must be an array`)
     }
 
+    const configuredFreeScrollSnapRanges = (
+      timelineConfig.freeScrollSnapRanges ?? []
+    )
+    if (!Array.isArray(configuredFreeScrollSnapRanges)) {
+      throw new TypeError(
+        `${sceneId}.timeline.freeScrollSnapRanges must be an array`,
+      )
+    }
+
+    const freeScrollSnapRanges = configuredFreeScrollSnapRanges.map(
+      (range, rangeIndex) => {
+        const name = `${sceneId}.timeline.freeScrollSnapRanges[${rangeIndex}]`
+        const direction = Math.sign(range?.direction ?? 0)
+        if (direction === 0) {
+          throw new RangeError(`${name}.direction must be nonzero`)
+        }
+
+        const startProgress = range.startProgress
+        const endProgress = range.endProgress
+        const targetProgress = range.targetProgress
+        assertNormalizedProgress(startProgress, `${name}.startProgress`)
+        assertNormalizedProgress(endProgress, `${name}.endProgress`)
+        assertNormalizedProgress(targetProgress, `${name}.targetProgress`)
+        if (endProgress <= startProgress) {
+          throw new RangeError(`${name} must end after it starts`)
+        }
+        if (targetProgress < startProgress || targetProgress > endProgress) {
+          throw new RangeError(`${name}.targetProgress must be inside its range`)
+        }
+
+        return Object.freeze({
+          direction,
+          endProgress,
+          id: range.id ?? null,
+          startProgress,
+          targetProgress,
+        })
+      },
+    )
+
     const exitTransitionLength = timelineConfig.exitTransitionLength
       ?? DEFAULT_TRANSITION_LENGTH
     assertPositiveLength(
@@ -62,9 +114,42 @@ export function compileSceneTimeline(registry) {
       `${sceneId}.timeline.exitTransitionLength`,
     )
 
-    const sceneStart = cursor
+    const leadingHoldLength = timelineConfig.leadingHoldLength ?? 0
+    assertNonnegativeLength(
+      leadingHoldLength,
+      `${sceneId}.timeline.leadingHoldLength`,
+    )
+
+    const forwardExitResistance = timelineConfig.forwardExitResistance ?? 0
+    assertNonnegativeLength(
+      forwardExitResistance,
+      `${sceneId}.timeline.forwardExitResistance`,
+    )
+
+    const reverseEntryResistance = timelineConfig.reverseEntryResistance ?? 0
+    assertNonnegativeLength(
+      reverseEntryResistance,
+      `${sceneId}.timeline.reverseEntryResistance`,
+    )
+
+    const leadingHoldStart = cursor
     const sectionIds = new Set()
     const sections = []
+
+    if (leadingHoldLength > 0) {
+      const leadingHoldEnd = leadingHoldStart + leadingHoldLength
+      segments.push(Object.freeze({
+        end: leadingHoldEnd,
+        length: leadingHoldLength,
+        sceneIndex,
+        start: leadingHoldStart,
+        type: 'hold',
+      }))
+      snapOffsets.push(leadingHoldStart)
+      cursor = leadingHoldEnd
+    }
+
+    const sceneStart = cursor
     snapOffsets.push(sceneStart)
 
     configuredSections.forEach((section, sectionIndex) => {
@@ -123,8 +208,14 @@ export function compileSceneTimeline(registry) {
       contentLength,
       end: transitionEnd,
       exitTransitionLength,
+      forwardExitResistance,
+      freeScrollSnapRanges: Object.freeze(freeScrollSnapRanges),
+      freeScroll: Boolean(timelineConfig.freeScroll),
       id: sceneId,
       index: sceneIndex,
+      leadingHoldLength,
+      leadingHoldStart,
+      reverseEntryResistance,
       sections: Object.freeze(sections),
       start: sceneStart,
       transitionStart,
@@ -133,6 +224,7 @@ export function compileSceneTimeline(registry) {
 
   return Object.freeze({
     cycleLength: cursor,
+    initialPosition: scenes[0].start,
     scenes: Object.freeze(scenes),
     segments: Object.freeze(segments),
     snapOffsets: Object.freeze(snapOffsets),
@@ -167,6 +259,22 @@ export function resolveSceneTimeline(position, timeline, output = {}) {
     Math.max(0, (cyclePosition - segment.start) / segment.length),
   )
 
+  if (segment.type === 'hold') {
+    output.currentIndex = segment.sceneIndex
+    output.cycleIndex = cycleIndex
+    output.cyclePosition = cyclePosition
+    output.leadingHoldProgress = segmentProgress
+    output.nextIndex = (segment.sceneIndex + 1) % timeline.scenes.length
+    output.phase = 'hold'
+    output.progress = 0
+    output.sceneProgress = 0
+    output.sectionId = null
+    output.sectionIndex = -1
+    output.sectionProgress = 0
+    output.segmentIndex = segmentIndex
+    return output
+  }
+
   if (segment.type === 'transition') {
     const outgoingScene = timeline.scenes[segment.currentIndex]
     const outgoingSection = outgoingScene.sections.at(-1) ?? null
@@ -174,6 +282,7 @@ export function resolveSceneTimeline(position, timeline, output = {}) {
     output.currentIndex = segment.currentIndex
     output.cycleIndex = cycleIndex
     output.cyclePosition = cyclePosition
+    output.leadingHoldProgress = 1
     output.nextIndex = segment.nextIndex
     output.phase = 'transition'
     output.progress = segmentProgress
@@ -193,6 +302,7 @@ export function resolveSceneTimeline(position, timeline, output = {}) {
   output.currentIndex = segment.sceneIndex
   output.cycleIndex = cycleIndex
   output.cyclePosition = cyclePosition
+  output.leadingHoldProgress = 1
   output.nextIndex = (segment.sceneIndex + 1) % timeline.scenes.length
   output.phase = 'section'
   output.progress = 0
@@ -202,6 +312,16 @@ export function resolveSceneTimeline(position, timeline, output = {}) {
   output.sectionProgress = segmentProgress
   output.segmentIndex = segmentIndex
   return output
+}
+
+// True while `position` sits inside a scene's own content span (not a hold
+// or transition) that has opted out of magnetic snapping, e.g. so the user
+// can pause anywhere in a long, continuously scrollable scene instead of
+// being pulled to whichever edge is nearest.
+export function isFreeScrollPosition(position, timeline) {
+  const transition = resolveSceneTimeline(position, timeline)
+  return transition.phase === 'section'
+    && Boolean(timeline.scenes[transition.currentIndex]?.freeScroll)
 }
 
 function getPeriodicSnapCandidates(position, timeline) {
@@ -240,6 +360,31 @@ export function getNearestSnapPosition(position, direction, timeline) {
   })
 
   return nearest
+}
+
+// Where a named scene's own content begins (after any leading hold), within
+// the timeline's first cycle.
+export function getSceneStartPosition(timeline, sceneId) {
+  assertTimeline(timeline)
+  const scene = timeline.scenes.find((candidate) => candidate.id === sceneId)
+  if (!scene) throw new RangeError(`Unknown scene id: ${sceneId}`)
+  return scene.start
+}
+
+// The timeline loops indefinitely (position isn't clamped — see
+// resolveSceneTimeline's modulo above), so after scrolling through it
+// several times, a scene's raw first-cycle start position can be many
+// cycles behind the current position. For menu-style "jump to this scene"
+// navigation, what you actually want is the occurrence of that scene
+// nearest to where you already are, so a jump only ever travels forward or
+// backward a short distance instead of unwinding every completed loop.
+export function getNearestSceneStartPosition(timeline, sceneId, referencePosition) {
+  assertFiniteNumber(referencePosition, 'referencePosition')
+  const rawStart = getSceneStartPosition(timeline, sceneId)
+  const cycleOffset = Math.round(
+    (referencePosition - rawStart) / timeline.cycleLength,
+  )
+  return rawStart + cycleOffset * timeline.cycleLength
 }
 
 export function getAdjacentSnapPosition(position, direction, timeline) {

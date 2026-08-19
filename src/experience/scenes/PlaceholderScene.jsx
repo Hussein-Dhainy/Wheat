@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import { Color, MathUtils } from 'three'
+import { advanceActiveSceneTime } from '../activeSceneTime.js'
 
 const BACKGROUND_COLOR_DAMPING = 5
 const GENETICS_EXIT_Y = 5.5
@@ -22,21 +23,6 @@ function GeneticsPlaceholder() {
         metalness={0.08}
         roughness={0.44}
         wireframe
-      />
-    </mesh>
-  )
-}
-
-function PredictionPlaceholder() {
-  return (
-    <mesh>
-      <torusKnotGeometry args={[1.18, 0.34, 128, 18, 2, 3]} />
-      <meshStandardMaterial
-        color="#f2c35c"
-        emissive="#5d3010"
-        emissiveIntensity={0.28}
-        metalness={0.2}
-        roughness={0.32}
       />
     </mesh>
   )
@@ -79,7 +65,6 @@ function ResultPlaceholder() {
 const PLACEHOLDER_GEOMETRY = {
   field: FieldPlaceholder,
   genetics: GeneticsPlaceholder,
-  prediction: PredictionPlaceholder,
   result: ResultPlaceholder,
 }
 
@@ -90,21 +75,27 @@ export function PlaceholderScene({
   sectionBackgrounds,
   variant,
 }) {
+  const activeTime = useRef(0)
   const backgroundColor = useRef()
   const backgroundTarget = useRef(new Color(background))
   const fog = useRef()
   const object = useRef()
   const PlaceholderGeometry = PLACEHOLDER_GEOMETRY[variant]
 
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     if (!sceneStateRef.current.isActive) return
 
+    activeTime.current = advanceActiveSceneTime(
+      activeTime.current,
+      delta,
+      !reducedMotion,
+    )
     const sceneState = sceneStateRef.current
     const visibility = sceneState.visibility
     const targetScale = 0.86 + visibility * 0.14
     const idleRotation = reducedMotion
       ? 0
-      : state.clock.elapsedTime * 0.12
+      : activeTime.current * 0.12
     const sectionBackground = sectionBackgrounds?.[sceneState.sectionId]
       ?? background
 
@@ -138,7 +129,7 @@ export function PlaceholderScene({
     )
     object.current.rotation.x = MathUtils.damp(
       object.current.rotation.x,
-      reducedMotion ? 0 : Math.sin(state.clock.elapsedTime * 0.35) * 0.08,
+      reducedMotion ? 0 : Math.sin(activeTime.current * 0.35) * 0.08,
       3,
       delta,
     )

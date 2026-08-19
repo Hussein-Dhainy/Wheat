@@ -5,10 +5,18 @@ import { SceneManager } from './SceneManager.jsx'
 export function ExperienceCanvas({
   entered,
   onReady,
+  onSelectGeneticsSeed,
+  onWarmupComplete,
   overlayRootRef,
   pointerRef,
+  predictionTestsOpen,
   reducedMotion,
+  resultInspectionOpen,
+  resultInteractionRef,
   scrollRef,
+  selectedGeneticsSeed,
+  selectedPredictionCondition,
+  selectedResultView,
   webglSupported,
 }) {
   if (!webglSupported) {
@@ -23,17 +31,25 @@ export function ExperienceCanvas({
     <div className="experience-canvas" aria-hidden="true">
       <Canvas
         camera={{ position: [0, 0, LANDING_INTRO.cameraInitialRadius], fov: 42 }}
-        dpr={[1, 1.75]}
+        dpr={[1, 1.5]}
         fallback={<div className="webgl-fallback" />}
-        gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
+        gl={{ alpha: true, antialias: false, powerPreference: 'high-performance' }}
         onCreated={onReady}
       >
         <SceneManager
           entered={entered}
+          onSelectGeneticsSeed={onSelectGeneticsSeed}
+          onWarmupComplete={onWarmupComplete}
           overlayRootRef={overlayRootRef}
           pointerRef={pointerRef}
+          predictionTestsOpen={predictionTestsOpen}
           reducedMotion={reducedMotion}
+          resultInspectionOpen={resultInspectionOpen}
+          resultInteractionRef={resultInteractionRef}
           scrollRef={scrollRef}
+          selectedGeneticsSeed={selectedGeneticsSeed}
+          selectedPredictionCondition={selectedPredictionCondition}
+          selectedResultView={selectedResultView}
         />
       </Canvas>
     </div>

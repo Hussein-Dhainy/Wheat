@@ -53,6 +53,7 @@ This is more achievable for a practice project than uniform photorealism and sti
 | Genetic network | Points plus line segments with seeded layout | Sections 1–2 |
 | Candidate stream | Instanced grains with per-instance position/phase/status | Sections 1–3 |
 | Wind field | Shared vertex shader uniforms plus per-instance phase | Section 4 and background field |
+| Field atmosphere | One camera-stable gradient sky plane with condition-driven palettes | Section 4 |
 | Trial plots | Instanced stalk placement from deterministic layouts | Sections 4–5 |
 | Hotspot anchors | Named empties exported in GLTF or fixed model-space vectors | Sections 1, 4, 6 |
 
@@ -153,4 +154,3 @@ Do not build spatial audio until the visual story is stable.
 - No visible seams at intended camera distance.
 - Compression does not create unacceptable artifacts.
 - Fallback image and editorial description exist for important scenes.
-

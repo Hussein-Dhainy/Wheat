@@ -70,19 +70,590 @@
   pointer-events: none;
 }
 
-.header {
-  position: relative;
+/* Scenes 2–4 provide their own WebGL atmosphere instead of the placeholder grid. */
+.layer[data-scene-id='genetics'] .placeholder::before,
+.layer[data-scene-id='prediction'] .placeholder::before,
+.layer[data-scene-id='field'] .placeholder::before,
+.layer[data-scene-id='result'] .placeholder::before {
+  content: none;
+}
+
+.layer[data-scene-id='prediction'] .placeholder {
+  pointer-events: none !important;
+}
+
+.layer[data-scene-id='result'],
+.layer[data-scene-id='result'] .placeholder {
+  pointer-events: none !important;
+}
+
+.resultExperience {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.resultPanel {
+  position: absolute;
+  bottom: clamp(2rem, 5vh, 4rem);
+  left: clamp(1.75rem, 7.8vw, 9.5rem);
+  display: grid;
+  width: min(43rem, 47vw);
+  gap: 1rem;
+  opacity: clamp(0.2, calc((var(--scene-progress, 0) - 0.32) * 7), 1);
+}
+
+.resultOptions {
   display: flex;
-  align-self: start;
-  justify-content: space-between;
-  color: rgb(245 241 231 / 64%);
-  font-size: 0.68rem;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  pointer-events: auto;
+}
+
+.resultOptions button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.9rem;
+  color: rgb(245 241 231 / 58%);
+  font: inherit;
+  font-size: 0.66rem;
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  background: rgb(255 255 255 / 4%);
+  border: 1px solid rgb(245 241 231 / 22%);
+  border-radius: 999px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.resultOptions button span {
+  margin-right: 0.55rem;
+  color: var(--scene-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.resultOptions button:hover,
+.resultOptions button:focus-visible {
+  color: #fff8e9;
+  border-color: rgb(239 180 75 / 72%);
+  transform: translateY(-2px);
+}
+
+.resultOptions button[aria-pressed='true'] {
+  color: #fff8e9;
+  background: rgb(239 180 75 / 14%);
+  border-color: #efb44b;
+}
+
+.resultOptions button:focus-visible {
+  outline: 2px solid #fff8e9;
+  outline-offset: 3px;
+}
+
+.resultDetail {
+  max-width: 31rem;
+  animation: result-detail-in 320ms ease both;
+}
+
+.resultDetail h3 {
+  margin: 0;
+  color: #fff8e9;
+  font-size: clamp(1rem, 1.35vw, 1.25rem);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.resultDetail p,
+.resultInstruction {
+  margin: 0.35rem 0 0;
+  color: rgb(245 241 231 / 60%);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.resultInstruction {
+  color: rgb(245 241 231 / 42%);
+  font-size: 0.63rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
-.header span:first-child,
+.resultClosing {
+  position: absolute;
+  right: clamp(1.75rem, 5vw, 5rem);
+  bottom: clamp(1.75rem, 4vw, 4rem);
+  max-width: 18rem;
+  margin: 0;
+  color: rgb(245 241 231 / 58%);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  opacity: clamp(0, calc((var(--scene-progress, 0) - 0.82) * 8), 1);
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.fallback .resultCopy,
+.fallback .resultPanel,
+.fallback .resultClosing {
+  opacity: 1;
+}
+
+@keyframes result-detail-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.predictionExperience {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.predictionIntro,
+.predictionTests {
+  position: absolute;
+  inset: 0;
+}
+
+.predictionIntro {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 360ms ease 260ms,
+    transform 480ms ease 260ms,
+    visibility 0s linear 0s;
+  visibility: visible;
+}
+
+.predictionExperience[data-tests-open='true'] .predictionIntro {
+  opacity: 0;
+  transform: translateY(-1rem);
+  transition-delay: 0s;
+  visibility: hidden;
+  transition-property: opacity, transform, visibility;
+  transition-duration: 280ms, 360ms, 0s;
+  transition-timing-function: ease, ease, linear;
+  transition-delay: 0s, 0s, 360ms;
+}
+
+.predictionCopy {
+  position: absolute;
+  top: clamp(3rem, 9vh, 6.5rem);
+  left: clamp(1.75rem, 7.8vw, 9.5rem);
+  width: min(40rem, 43vw);
+}
+
+.predictionCopy h2 {
+  max-width: 10ch;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(3.25rem, 5.8vw, 6.75rem);
+  font-weight: 500;
+  letter-spacing: -0.052em;
+  line-height: 0.92;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+/* TitleParticleText renders the visible titles below (prediction, field,
+   result); the real h2 in each stays but only carries accessible text. */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.predictionTitleLines,
+.fieldTitleLines,
+.resultTitleLines {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.predictionTitleLines > *,
+.fieldTitleLines > *,
+.resultTitleLines > * {
+  max-width: 100%;
+}
+
+.predictionCopy p {
+  max-width: 35rem;
+  margin: clamp(1.3rem, 2.2vw, 2rem) 0 0;
+  color: rgb(255 255 255 / 76%);
+  font-size: clamp(0.92rem, 1.18vw, 1.08rem);
+  line-height: 1.65;
+}
+
+.testActionOrbit {
+  position: absolute;
+  bottom: clamp(2.5rem, 7vh, 5.5rem);
+  left: clamp(2.5rem, 9vw, 10.5rem);
+  display: grid;
+  width: clamp(8.75rem, 11vw, 11.5rem);
+  aspect-ratio: 1;
+  cursor: pointer;
+  place-items: center;
+  pointer-events: auto;
+  transition: transform 260ms ease;
+}
+
+.testActionOrbit::before {
+  position: absolute;
+  inset: -0.75rem;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 205deg,
+    rgb(255 255 255 / 5%) 235deg,
+    rgb(255 255 255 / 35%) 285deg,
+    rgb(255 255 255 / 95%) 350deg,
+    transparent 360deg
+  );
+  border-radius: 50%;
+  content: '';
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 1.5px),
+    #000 calc(100% - 1.25px)
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 1.5px),
+    #000 calc(100% - 1.25px)
+  );
+  animation: prediction-ring-orbit 4.6s linear infinite;
+  pointer-events: none;
+}
+
+.testActionOrbit:hover,
+.testActionOrbit:focus-within {
+  transform: scale(1.065);
+}
+
+.testAction {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 1rem;
+  color: #fff;
+  font: inherit;
+  font-size: clamp(0.58rem, 0.72vw, 0.73rem);
+  font-weight: 750;
+  letter-spacing: 0.075em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  background: rgb(150 154 143 / 15%);
+  border: 1px solid rgb(255 255 255 / 78%);
+  border-radius: 50%;
+  cursor: pointer;
+  place-items: center;
+  backdrop-filter: blur(3px);
+}
+
+.testAction span {
+  width: calc(100% - 1.25rem);
+  text-align: center;
+}
+
+.testAction:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 0.45rem;
+}
+
+.predictionTests {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(1rem);
+  transition:
+    opacity 280ms ease,
+    transform 360ms ease,
+    visibility 0s linear 360ms;
+  visibility: hidden;
+}
+
+.predictionExperience[data-tests-open='true'] .predictionTests {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 420ms ease 320ms,
+    transform 520ms ease 320ms,
+    visibility 0s linear 320ms;
+  visibility: visible;
+}
+
+.testsExit {
+  position: absolute;
+  top: clamp(1.5rem, 4vw, 4rem);
+  right: clamp(1.5rem, 4vw, 4rem);
+  width: clamp(3.75rem, 5.5vw, 5.5rem);
+  aspect-ratio: 1;
+  padding: 0;
+  background: rgb(150 154 143 / 10%);
+  border: 1px solid rgb(255 255 255 / 48%);
+  border-radius: 50%;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background-color 220ms ease, border-color 220ms ease, transform 220ms ease;
+}
+
+.testsExit span::before,
+.testsExit span::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36%;
+  height: 1px;
+  background: #fff;
+  content: '';
+}
+
+.testsExit span::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.testsExit span::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.testsExit:hover,
+.testsExit:focus-visible {
+  background: rgb(255 255 255 / 12%);
+  border-color: rgb(255 255 255 / 88%);
+  transform: scale(1.08);
+}
+
+.testsExit:focus-visible,
+.conditionOptions button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 0.3rem;
+}
+
+.conditionPanel {
+  position: absolute;
+  top: clamp(9rem, 28vh, 19rem);
+  left: clamp(1.75rem, 7.8vw, 9.5rem);
+  width: min(52rem, 51vw);
+}
+
+.conditionCopy {
+  animation: prediction-condition-copy-in 360ms ease both;
+}
+
+.conditionCopy > p:first-child {
+  margin: 0 0 1.2rem;
+  color: rgb(255 255 255 / 58%);
+  font-size: clamp(0.63rem, 0.78vw, 0.76rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.conditionCopy h2 {
+  max-width: 12ch;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(3rem, 5.15vw, 6rem);
+  font-weight: 500;
+  letter-spacing: -0.052em;
+  line-height: 0.92;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.conditionCopy > p:last-child {
+  max-width: 34rem;
+  margin: clamp(1.15rem, 2vw, 1.75rem) 0 0;
+  color: rgb(255 255 255 / 74%);
+  font-size: clamp(0.9rem, 1.1vw, 1.04rem);
+  line-height: 1.62;
+}
+
+.conditionOptions {
+  position: absolute;
+  bottom: clamp(2.5rem, 7vh, 5.5rem);
+  left: clamp(1.75rem, 7.8vw, 9.5rem);
+  display: flex;
+  gap: clamp(0.65rem, 1.15vw, 1.2rem);
+}
+
+.conditionOptions button {
+  display: grid;
+  width: clamp(4.9rem, 6.1vw, 6.5rem);
+  aspect-ratio: 1;
+  padding: 0.6rem;
+  color: rgb(255 255 255 / 58%);
+  font: inherit;
+  font-size: clamp(0.5rem, 0.6vw, 0.64rem);
+  font-weight: 700;
+  letter-spacing: 0.075em;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
+  background: rgb(150 154 143 / 8%);
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 50%;
+  cursor: pointer;
+  place-items: center;
+  pointer-events: auto;
+  transition:
+    color 220ms ease,
+    background-color 220ms ease,
+    border-color 220ms ease,
+    transform 220ms ease;
+}
+
+.conditionOptions button:hover,
+.conditionOptions button:focus-visible {
+  color: #fff;
+  border-color: rgb(255 255 255 / 72%);
+  transform: scale(1.06);
+}
+
+.conditionOptions button[aria-pressed='true'] {
+  color: #fff;
+  background: rgb(255 255 255 / 16%);
+  border-color: #fff;
+}
+
+@keyframes prediction-condition-copy-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes prediction-ring-orbit {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* Leave the WebGL carousel reachable while keeping its HTML controls active. */
+.layer[data-scene-id='genetics'],
+.layer[data-scene-id='genetics'] .placeholder {
+  pointer-events: none !important;
+}
+
+.seedSelector {
+  position: relative;
+  display: grid;
+  align-self: center;
+  justify-self: end;
+  width: min(31rem, 42vw);
+  gap: clamp(1.5rem, 3vw, 2.75rem);
+  opacity: var(--seed-carousel-progress, 0);
+  pointer-events: none;
+  transform: translateY(var(--seed-carousel-offset, 1.5rem));
+  transition: visibility 0s linear 160ms;
+  visibility: hidden;
+}
+
+.layer[data-seed-carousel-active='true'] .seedSelector,
+.fallback .seedSelector {
+  pointer-events: auto;
+  transition-delay: 0s;
+  visibility: visible;
+}
+
+.fallback .seedSelector {
+  opacity: 1;
+  transform: none;
+}
+
+.seedCopy .eyebrow {
+  margin-bottom: 0.8rem;
+}
+
+.seedCopy h2 {
+  max-width: 9ch;
+  margin: 0;
+  font-size: clamp(2.7rem, 5vw, 5.5rem);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 0.9;
+  text-wrap: balance;
+}
+
+.seedCopy > p:last-child {
+  max-width: 27rem;
+  margin: 1.3rem 0 0;
+  color: rgb(245 241 231 / 68%);
+  font-size: clamp(0.92rem, 1.2vw, 1.08rem);
+  line-height: 1.6;
+}
+
+.seedOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.seedOptions button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.9rem;
+  color: rgb(245 241 231 / 62%);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: rgb(255 255 255 / 3%);
+  border: 1px solid rgb(245 241 231 / 20%);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease;
+}
+
+.seedOptions button span {
+  margin-right: 0.55rem;
+  color: var(--scene-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.seedOptions button:hover,
+.seedOptions button[aria-pressed='true'] {
+  color: #fff8e9;
+  background: rgb(200 221 108 / 12%);
+  border-color: rgb(200 221 108 / 68%);
+}
+
+.seedOptions button:focus-visible {
+  outline: 2px solid #fff8e9;
+  outline-offset: 3px;
+}
+
 .eyebrow {
   color: var(--scene-accent);
 }
@@ -120,6 +691,34 @@
   line-height: 1.65;
 }
 
+/* Scene 4 uses the editorial left-hand composition of the aerial field beat. */
+.layer[data-scene-id='field'] .copy {
+  position: absolute;
+  top: 50%;
+  left: clamp(2.75rem, 7.8vw, 12.5rem);
+  width: min(55rem, 48vw);
+  text-align: left;
+  transform: translateY(-43%);
+}
+
+.layer[data-scene-id='field'] .copy .eyebrow {
+  display: none;
+}
+
+.layer[data-scene-id='field'] .copy h2 {
+  max-width: 11.5ch;
+  font-size: clamp(4rem, 6.1vw, 7.8rem);
+  line-height: 0.96;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.layer[data-scene-id='field'] .copy > p:last-child {
+  max-width: 39rem;
+  margin: clamp(1.4rem, 2vw, 2rem) 0 0;
+  color: rgb(255 255 255 / 82%);
+}
+
 .hint {
   position: relative;
   align-self: end;
@@ -145,6 +744,43 @@
 }
 
 @media (max-width: 759px) {
+  .resultPanel {
+    bottom: max(1.4rem, env(safe-area-inset-bottom));
+    left: 1.5rem;
+    width: calc(100vw - 3rem);
+    gap: 0.65rem;
+  }
+
+  .resultOptions {
+    gap: 0.4rem;
+  }
+
+  .resultOptions button {
+    min-height: 2.35rem;
+    padding: 0.48rem 0.62rem;
+    font-size: 0.55rem;
+  }
+
+  .resultOptions button span {
+    margin-right: 0.38rem;
+  }
+
+  .resultDetail {
+    max-width: 21rem;
+  }
+
+  .resultDetail p {
+    font-size: 0.75rem;
+  }
+
+  .resultInstruction {
+    display: none;
+  }
+
+  .resultClosing {
+    display: none;
+  }
+
   .header span:last-child {
     display: none;
   }
@@ -153,7 +789,814 @@
     font-size: clamp(3.2rem, 16vw, 5.6rem);
   }
 
+  .layer[data-scene-id='field'] .copy {
+    top: 50%;
+    left: 1.5rem;
+    width: calc(100vw - 3rem);
+    transform: translateY(-45%);
+  }
+
+  .layer[data-scene-id='field'] .copy h2 {
+    max-width: 9.5ch;
+    font-size: clamp(3.25rem, 14.5vw, 5.25rem);
+    line-height: 0.94;
+  }
+
+  .layer[data-scene-id='field'] .copy > p:last-child {
+    max-width: 29rem;
+    margin-top: 1.1rem;
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+
   .hint {
     justify-self: start;
+  }
+
+  .seedSelector {
+    align-self: end;
+    justify-self: stretch;
+    width: 100%;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    gap: 1.15rem;
+  }
+
+  .seedCopy h2 {
+    font-size: clamp(2.5rem, 12vw, 4rem);
+  }
+
+  .seedCopy > p:last-child {
+    max-width: 24rem;
+    margin-top: 0.8rem;
+  }
+
+  .seedOptions {
+    gap: 0.45rem;
+  }
+
+  .seedOptions button {
+    min-height: 2.6rem;
+    padding: 0.55rem 0.7rem;
+    font-size: 0.61rem;
+  }
+
+  .predictionCopy {
+    top: 18vh;
+    left: 1.5rem;
+    width: min(31rem, calc(100vw - 3rem));
+  }
+
+  .predictionCopy h2 {
+    max-width: 9ch;
+    font-size: clamp(2.8rem, 13vw, 4.75rem);
+  }
+
+  .predictionCopy p {
+    max-width: 25rem;
+    margin-top: 1rem;
+    font-size: 0.88rem;
+  }
+
+  .testActionOrbit {
+    bottom: max(2.25rem, env(safe-area-inset-bottom));
+    left: 2.25rem;
+    width: 7.6rem;
+  }
+
+  .testsExit {
+    top: 1.25rem;
+    right: 1.25rem;
+    width: 3.75rem;
+  }
+
+  .conditionPanel {
+    top: 16vh;
+    left: 1.5rem;
+    width: min(31rem, calc(100vw - 3rem));
+  }
+
+  .conditionCopy > p:first-child {
+    margin-bottom: 0.8rem;
+  }
+
+  .conditionCopy h2 {
+    max-width: 10ch;
+    font-size: clamp(2.65rem, 12vw, 4.5rem);
+  }
+
+  .conditionCopy > p:last-child {
+    max-width: 25rem;
+    margin-top: 0.9rem;
+    font-size: 0.86rem;
+  }
+
+  .conditionOptions {
+    bottom: max(2.25rem, env(safe-area-inset-bottom));
+    left: 1.5rem;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    width: calc(100vw - 3rem);
+  }
+
+  .conditionOptions button {
+    width: clamp(4.15rem, 19vw, 5rem);
+    font-size: 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .testActionOrbit::before {
+    animation: none;
+  }
+
+  .testActionOrbit {
+    transition: none;
+  }
+
+  .predictionIntro,
+  .predictionTests,
+  .testsExit,
+  .conditionCopy,
+  .conditionOptions button {
+    animation: none;
+    transition: none;
+  }
+
+  .seedSelector,
+  .seedOptions button,
+  .resultDetail,
+  .resultOptions button {
+    animation: none;
+    transition: none;
+  }
+}
+
+.resultJourney {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  height: 200vh;
+  flex-direction: column;
+  pointer-events: none;
+  /* The 3D grain (ResultScene.jsx, CONFIG.grain.exitRange) finishes moving
+     away by section-progress 0.72. The closing page's slide-in and the
+     grain copy's fade-out both derive from this single value so they stay
+     in lockstep with each other and only start once the grain is gone,
+     instead of three independently-timed animations drifting apart. */
+  --closing-reveal: clamp(0, calc((var(--section-progress, 0) - 0.72) / 0.22), 1);
+  transform: translateY(calc(var(--closing-reveal) * -100vh));
+  will-change: transform;
+}
+
+.fallback .resultJourney {
+  position: relative;
+  height: auto;
+  transform: none !important;
+}
+
+/* Scene 5: final selection and closing actions. These rules intentionally
+   follow the earlier prototype styles so they fully replace that treatment. */
+.resultExperience,
+.resultClosingExperience {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  flex: 0 0 100vh;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.resultExperience {
+  opacity: calc(1 - var(--closing-reveal));
+}
+
+.resultIntro,
+.resultInspection {
+  position: absolute;
+  inset: 0;
+}
+
+.resultIntro {
+  opacity: 1;
+  transition: opacity 360ms ease 0ms;
+}
+
+.resultExperience[data-inspection-open='true'] .resultIntro {
+  opacity: 0;
+  transition-delay: 260ms;
+}
+
+.resultInspection {
+  z-index: 4;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 420ms ease 0ms,
+    visibility 0s linear 420ms;
+}
+
+.resultExperience[data-inspection-open='true'] .resultInspection {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 420ms ease 720ms,
+    visibility 0s linear 0ms;
+}
+
+.resultInspectionClose {
+  position: absolute;
+  top: clamp(1.5rem, 4vw, 3.75rem);
+  right: clamp(1.5rem, 4vw, 3.75rem);
+  z-index: 8;
+  width: clamp(3.75rem, 5vw, 5.25rem);
+  aspect-ratio: 1;
+  padding: 0;
+  color: #fff;
+  background: rgb(0 30 24 / 46%);
+  border: 1px solid rgb(255 255 255 / 82%);
+  border-radius: 50%;
+  box-shadow: 0 0 1.8rem rgb(118 220 196 / 12%);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background-color 200ms ease, transform 220ms ease;
+}
+
+.resultInspectionClose span {
+  display: block;
+  font-size: clamp(1.7rem, 2.2vw, 2.2rem);
+  font-weight: 200;
+  line-height: 1;
+  transform: translateY(-0.06em);
+}
+
+.resultInspectionClose:hover,
+.resultInspectionClose:focus-visible {
+  background: rgb(255 255 255 / 12%);
+  transform: scale(1.06);
+}
+
+.resultInspectionCopy {
+  position: absolute;
+  top: 50%;
+  left: clamp(2.75rem, 8vw, 10rem);
+  z-index: 5;
+  width: min(38rem, 39vw);
+  animation: result-inspection-copy-in 420ms ease both;
+  transform: translateY(-50%);
+}
+
+.resultInspectionCopy .eyebrow {
+  margin-bottom: 1.1rem;
+  color: #f0c35e;
+}
+
+.resultInspectionCopy h2 {
+  max-width: 10ch;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(3.7rem, 6vw, 7.3rem);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 0.94;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.resultInspectionCopy > p:last-child {
+  max-width: 35rem;
+  margin: clamp(1.25rem, 2vw, 1.8rem) 0 0;
+  color: rgb(255 255 255 / 78%);
+  font-size: clamp(0.9rem, 1.1vw, 1.08rem);
+  line-height: 1.65;
+}
+
+.resultGrainDragSurface {
+  position: absolute;
+  top: 13%;
+  right: 2%;
+  bottom: 13%;
+  z-index: 5;
+  width: 57%;
+  cursor: grab;
+  outline: 0;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.resultGrainDragSurface:active {
+  cursor: grabbing;
+}
+
+.resultGrainDragSurface:focus-visible {
+  border-radius: 48%;
+  box-shadow: inset 0 0 0 2px rgb(255 255 255 / 74%);
+}
+
+.resultViewControls {
+  position: absolute;
+  right: clamp(4rem, 10vw, 11rem);
+  bottom: clamp(3.25rem, 7vh, 6.25rem);
+  z-index: 7;
+  display: flex;
+  justify-content: center;
+  width: min(34rem, 44vw);
+  gap: clamp(0.8rem, 1.7vw, 1.6rem);
+  pointer-events: none;
+}
+
+.resultViewControls button {
+  width: clamp(3.8rem, 5.4vw, 5.7rem);
+  aspect-ratio: 1;
+  padding: 0;
+  color: rgb(255 255 255 / 48%);
+  font: inherit;
+  font-size: clamp(0.88rem, 1.1vw, 1.08rem);
+  font-weight: 720;
+  background: rgb(0 35 28 / 28%);
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 50%;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 220ms ease;
+}
+
+.resultViewControls button:hover,
+.resultViewControls button:focus-visible,
+.resultViewControls button[aria-pressed='true'] {
+  color: #fff;
+  background: rgb(255 255 255 / 10%);
+  border-color: rgb(255 255 255 / 88%);
+  transform: scale(1.08);
+}
+
+.resultInspectionClose:focus-visible,
+.resultViewControls button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 0.3rem;
+}
+
+.resultInspectionInstruction {
+  position: absolute;
+  right: clamp(4rem, 10vw, 11rem);
+  bottom: clamp(1.25rem, 2.7vh, 2.25rem);
+  z-index: 6;
+  width: min(34rem, 44vw);
+  margin: 0;
+  color: rgb(255 255 255 / 48%);
+  font-size: 0.64rem;
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@keyframes result-inspection-copy-in {
+  from {
+    opacity: 0;
+    transform: translate(-1.25rem, -50%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
+.resultCopy {
+  position: absolute;
+  top: 50%;
+  left: clamp(2.75rem, 8vw, 10rem);
+  width: min(48rem, 46vw);
+  opacity: 1;
+  transform: translateY(-49%);
+}
+
+.resultCopy .eyebrow {
+  margin-bottom: 1.15rem;
+  color: #f0c35e;
+}
+
+.resultCopy h2 {
+  max-width: 10ch;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(4rem, 6.25vw, 7.8rem);
+  font-weight: 400;
+  letter-spacing: -0.055em;
+  line-height: 0.94;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.resultCopy > p:last-child {
+  max-width: 39rem;
+  margin: clamp(1.35rem, 2.2vw, 2rem) 0 0;
+  color: rgb(255 255 255 / 78%);
+  font-size: clamp(0.92rem, 1.2vw, 1.12rem);
+  line-height: 1.65;
+}
+
+.resultOrbitAction {
+  position: absolute;
+  top: clamp(8rem, 17vh, 12rem);
+  right: clamp(4rem, 11vw, 12rem);
+  z-index: 3;
+  display: grid;
+  width: clamp(8.5rem, 11vw, 11.5rem);
+  aspect-ratio: 1;
+  padding: 1.2rem;
+  color: #fff;
+  font: inherit;
+  font-size: clamp(0.62rem, 0.78vw, 0.78rem);
+  font-weight: 780;
+  letter-spacing: 0.09em;
+  line-height: 1.25;
+  text-align: center;
+  text-transform: uppercase;
+  background: rgb(255 255 255 / 5%);
+  border: 1px solid rgb(255 255 255 / 82%);
+  border-radius: 50%;
+  cursor: pointer;
+  place-items: center;
+  pointer-events: auto;
+  transition: background-color 220ms ease, transform 240ms ease;
+}
+
+.resultOrbitAction::before {
+  position: absolute;
+  inset: -1.45rem;
+  border: 1px solid rgb(255 255 255 / 36%);
+  border-bottom-color: transparent;
+  border-left-color: rgb(255 255 255 / 9%);
+  border-radius: 50%;
+  content: '';
+  animation: result-orbit-turn 8s linear infinite;
+  pointer-events: none;
+}
+
+.resultOrbitAction:hover,
+.resultOrbitAction:focus-visible {
+  background: rgb(255 255 255 / 12%);
+  transform: scale(1.06);
+}
+
+.resultOrbitAction:focus-visible,
+.closingActions button:focus-visible,
+.closingFooter button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 0.35rem;
+}
+
+.resultClosingExperience {
+  background: linear-gradient(115deg, rgb(0 36 29 / 10%), rgb(0 72 55 / 8%));
+}
+
+.closingIntro,
+.closingDetail {
+  position: absolute;
+  inset: 0;
+}
+
+.closingFooter {
+  transition: opacity 260ms ease;
+}
+
+.resultClosingExperience[data-detail-open='true'] .closingFooter {
+  opacity: 0;
+}
+
+.closingDetail {
+  z-index: 5;
+  opacity: 0;
+  visibility: hidden;
+  background:
+    radial-gradient(circle at 62% 48%, rgb(64 151 124 / 8%), transparent 34%),
+    linear-gradient(115deg, rgb(0 31 25 / 18%), rgb(0 71 54 / 8%));
+  transition:
+    opacity 420ms ease 0ms,
+    visibility 0s linear 420ms;
+}
+
+.resultClosingExperience[data-detail-open='true'] .closingDetail {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 460ms ease 480ms,
+    visibility 0s linear 0ms;
+}
+
+.closingDetailCopy {
+  position: absolute;
+  top: 50%;
+  left: clamp(2.75rem, 11vw, 13rem);
+  width: min(54rem, 65vw);
+  transform: translateY(-50%);
+}
+
+.closingDetailCopy .eyebrow {
+  margin-bottom: 1.2rem;
+  color: #f0c35e;
+}
+
+.closingDetailCopy h2 {
+  max-width: 15ch;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(3.6rem, 6.25vw, 7.75rem);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 0.94;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.closingDetailCopy > p:last-child {
+  max-width: 47rem;
+  margin: clamp(1.4rem, 2.25vw, 2.1rem) 0 0;
+  color: rgb(255 255 255 / 76%);
+  font-size: clamp(0.95rem, 1.25vw, 1.16rem);
+  line-height: 1.65;
+}
+
+.closingActions {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: min(62rem, 66vw);
+  transform: translate(-50%, -48%);
+}
+
+.closingActions button {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  min-height: clamp(4.7rem, 10vh, 7rem);
+  padding: 0 0.75rem;
+  color: #fff;
+  font: inherit;
+  font-size: clamp(1.75rem, 3vw, 3.75rem);
+  font-weight: 540;
+  letter-spacing: -0.025em;
+  text-align: left;
+  text-transform: uppercase;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgb(119 204 173 / 12%);
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    color 200ms ease,
+    padding-left 240ms ease,
+    border-color 200ms ease,
+    opacity 300ms ease,
+    filter 400ms ease,
+    transform 520ms cubic-bezier(0.2, 0.72, 0.2, 1);
+  transform-origin: center;
+}
+
+.resultClosingExperience[data-detail-open='true'] .closingActions button {
+  opacity: 0;
+  filter: blur(2px);
+  transform: scale(0.94);
+}
+
+.resultClosingExperience[data-detail-open='true'] .closingActions button[data-selected='true'] {
+  filter: blur(5px);
+  transform: scale(1.32);
+}
+
+.closingActions button:first-child {
+  border-top: 1px solid rgb(119 204 173 / 12%);
+}
+
+.closingActions button span:last-child {
+  color: rgb(255 255 255 / 72%);
+  font-size: 0.38em;
+  transition: transform 220ms ease;
+}
+
+.closingActions button:hover,
+.closingActions button:focus-visible {
+  color: #f3cb65;
+  padding-left: 1.25rem;
+  border-color: rgb(119 204 173 / 38%);
+}
+
+.closingActions button:hover span:last-child,
+.closingActions button:focus-visible span:last-child {
+  transform: translate(0.3rem, -0.3rem);
+}
+
+.closingFooter {
+  position: absolute;
+  right: clamp(1.5rem, 4.2vw, 4rem);
+  bottom: clamp(1.5rem, 3vw, 3rem);
+  left: clamp(1.5rem, 4.2vw, 4rem);
+  display: flex;
+  gap: clamp(1rem, 2.4vw, 2.5rem);
+}
+
+.closingFooter button {
+  padding: 0;
+  color: rgb(255 255 255 / 56%);
+  font: inherit;
+  font-size: 0.65rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.closingFooter button:hover,
+.closingFooter button:focus-visible {
+  color: #fff;
+}
+
+.fallback .resultExperience {
+  opacity: 1;
+}
+
+@keyframes result-orbit-turn {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (max-width: 759px) {
+  .resultCopy {
+    top: 14vh;
+    left: 1.5rem;
+    width: calc(100vw - 3rem);
+    transform: none;
+  }
+
+  .resultCopy .eyebrow {
+    margin-bottom: 0.75rem;
+  }
+
+  .resultCopy h2 {
+    max-width: 8ch;
+    font-size: clamp(3rem, 13.5vw, 5rem);
+  }
+
+  .resultCopy > p:last-child {
+    max-width: 23rem;
+    margin-top: 0.9rem;
+    font-size: 0.84rem;
+    line-height: 1.55;
+  }
+
+  .resultOrbitAction {
+    top: 56%;
+    right: 8vw;
+    width: 6.5rem;
+    font-size: 0.56rem;
+  }
+
+  .resultOrbitAction::before {
+    inset: -0.85rem;
+  }
+
+  .resultInspectionClose {
+    top: 1.25rem;
+    right: 1.25rem;
+    width: 3.5rem;
+  }
+
+  .resultInspectionCopy {
+    top: 12vh;
+    left: 1.5rem;
+    width: calc(100vw - 5.5rem);
+    transform: none;
+  }
+
+  .resultInspectionCopy .eyebrow {
+    margin-bottom: 0.65rem;
+  }
+
+  .resultInspectionCopy h2 {
+    max-width: 9ch;
+    font-size: clamp(2.7rem, 12vw, 4.25rem);
+  }
+
+  .resultInspectionCopy > p:last-child {
+    max-width: 27rem;
+    margin-top: 0.8rem;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  .resultGrainDragSurface {
+    top: 37%;
+    right: 0;
+    bottom: 12%;
+    width: 100%;
+  }
+
+  .resultViewControls {
+    right: 50%;
+    bottom: 5.5vh;
+    width: calc(100vw - 3rem);
+    transform: translateX(50%);
+  }
+
+  .resultViewControls button {
+    width: clamp(3.5rem, 16vw, 4.5rem);
+  }
+
+  .resultInspectionInstruction {
+    display: none;
+  }
+
+  @keyframes result-inspection-copy-in {
+    from {
+      opacity: 0;
+      transform: translateX(-1rem);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .closingActions {
+    top: 49%;
+    width: calc(100vw - 3rem);
+  }
+
+  .closingDetailCopy {
+    top: 50%;
+    left: 1.5rem;
+    width: calc(100vw - 3rem);
+  }
+
+  .closingDetailCopy .eyebrow {
+    margin-bottom: 0.8rem;
+  }
+
+  .closingDetailCopy h2 {
+    max-width: 11ch;
+    font-size: clamp(2.8rem, 13vw, 4.75rem);
+  }
+
+  .closingDetailCopy > p:last-child {
+    max-width: 28rem;
+    margin-top: 1rem;
+    font-size: 0.84rem;
+    line-height: 1.55;
+  }
+
+  .closingActions button {
+    min-height: clamp(4rem, 11vh, 5.5rem);
+    padding-right: 0.3rem;
+    padding-left: 0.3rem;
+    font-size: clamp(1.35rem, 6.5vw, 2rem);
+    line-height: 1.05;
+  }
+
+  .closingFooter {
+    flex-wrap: wrap;
+    gap: 0.7rem 1.1rem;
+  }
+
+  .closingFooter button {
+    font-size: 0.54rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resultOrbitAction::before {
+    animation: none;
+  }
+
+  .resultOrbitAction,
+  .resultIntro,
+  .resultInspection,
+  .resultInspectionClose,
+  .resultViewControls button,
+  .closingDetail,
+  .closingFooter,
+  .closingActions button,
+  .closingActions button span:last-child {
+    transition: none;
+  }
+
+  .resultExperience[data-inspection-open='true'] .resultInspection {
+    transition-delay: 0ms;
+  }
+
+  .resultClosingExperience[data-detail-open='true'] .closingDetail {
+    transition-delay: 0ms;
+  }
+
+  .resultInspectionCopy {
+    animation: none;
   }
 }

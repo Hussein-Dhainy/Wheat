@@ -29,25 +29,39 @@ export function LandingCameraRig({
     const yaw = pointer.ndcX * LANDING_CAMERA.horizontalOrbit * motionScale
     const pitch = pointer.ndcY * LANDING_CAMERA.verticalOrbit * motionScale
     const pitchRadius = Math.cos(pitch) * radius
+    const leadingHoldProgress = sceneStateRef?.current.leadingHoldProgress ?? 1
+    const leadingHoldOffset = (
+      1 - MathUtils.smootherstep(leadingHoldProgress, 0, 1)
+    ) * LANDING_INTRO.leadingHoldCameraOffsetY
+    const targetX = Math.sin(yaw) * pitchRadius
+    const targetY = Math.sin(pitch) * radius + leadingHoldOffset
+    const targetZ = Math.cos(yaw) * pitchRadius
 
-    camera.position.x = MathUtils.damp(
-      camera.position.x,
-      Math.sin(yaw) * pitchRadius,
-      LANDING_INTRO.cameraTransitionSpeed,
-      delta,
-    )
-    camera.position.y = MathUtils.damp(
-      camera.position.y,
-      Math.sin(pitch) * radius,
-      LANDING_INTRO.cameraTransitionSpeed,
-      delta,
-    )
-    camera.position.z = MathUtils.damp(
-      camera.position.z,
-      Math.cos(yaw) * pitchRadius,
-      LANDING_INTRO.cameraTransitionSpeed,
-      delta,
-    )
+    camera.position.x = reducedMotion
+      ? targetX
+      : MathUtils.damp(
+          camera.position.x,
+          targetX,
+          LANDING_INTRO.cameraTransitionSpeed,
+          delta,
+        )
+    camera.position.y = reducedMotion
+      ? targetY
+      : MathUtils.damp(
+          camera.position.y,
+          targetY,
+          LANDING_INTRO.cameraTransitionSpeed,
+          delta,
+        )
+    camera.position.z = reducedMotion
+      ? targetZ
+      : MathUtils.damp(
+          camera.position.z,
+          targetZ,
+          LANDING_INTRO.cameraTransitionSpeed,
+          delta,
+        )
+    CAMERA_TARGET.y = leadingHoldOffset
     camera.lookAt(CAMERA_TARGET)
   })
 

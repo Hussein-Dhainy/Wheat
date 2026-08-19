@@ -3,6 +3,7 @@ import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { Box3, Color, MathUtils, Vector3 } from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js'
+import { advanceActiveSceneTime } from '../activeSceneTime.js'
 import { LandingCameraRig } from '../camera/LandingCameraRig.jsx'
 import { BackgroundParticles } from '../systems/BackgroundParticles.jsx'
 
@@ -78,6 +79,7 @@ function LandingLights() {
 }
 
 function WheatPlant({ reducedMotion, sceneStateRef }) {
+  const activeTime = useRef(0)
   const wheat = useRef()
   const { size } = useThree()
   const { scene } = useLoader(GLTFLoader, WHEAT_MODEL_URL)
@@ -138,14 +140,20 @@ function WheatPlant({ reducedMotion, sceneStateRef }) {
     }
   }, [model])
 
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     if (sceneStateRef && !sceneStateRef.current.isActive) return
+
+    activeTime.current = advanceActiveSceneTime(
+      activeTime.current,
+      delta,
+      !reducedMotion,
+    )
 
     const compact = size.width < 760
     const basePosition = compact
       ? WHEAT_TRANSFORM.compactPosition
       : WHEAT_TRANSFORM.desktopPosition
-    const idle = reducedMotion ? 0 : Math.sin(state.clock.elapsedTime * 0.55)
+    const idle = reducedMotion ? 0 : Math.sin(activeTime.current * 0.55)
 
     wheat.current.position.x = MathUtils.damp(
       wheat.current.position.x,

@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
 import { AdditiveBlending, Color } from 'three'
+import { advanceActiveSceneTime } from '../activeSceneTime.js'
 import {
   backgroundParticleFragmentShader,
   backgroundParticleVertexShader,
@@ -88,6 +89,7 @@ function createBackgroundParticleAttributes() {
 }
 
 export function BackgroundParticles({ reducedMotion, sceneStateRef }) {
+  const activeTime = useRef(0)
   const material = useRef()
   const attributes = useMemo(createBackgroundParticleAttributes, [])
   const uniforms = useMemo(
@@ -100,12 +102,15 @@ export function BackgroundParticles({ reducedMotion, sceneStateRef }) {
     [],
   )
 
-  useFrame((state) => {
+  useFrame((_, delta) => {
     if (sceneStateRef && !sceneStateRef.current.isActive) return
 
-    material.current.uniforms.uTime.value = reducedMotion
-      ? 0
-      : state.clock.elapsedTime
+    activeTime.current = advanceActiveSceneTime(
+      activeTime.current,
+      delta,
+      !reducedMotion,
+    )
+    material.current.uniforms.uTime.value = reducedMotion ? 0 : activeTime.current
   })
 
   return (

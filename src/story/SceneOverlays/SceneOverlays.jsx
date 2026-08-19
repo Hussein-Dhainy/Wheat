@@ -1,59 +1,27 @@
 import { SCENE_TIMELINE_CONFIG } from '../../config/sceneTimeline.js'
 import { SCENE_REGISTRY } from '../../experience/SceneRegistry.js'
 import { LandingSection } from '../sections/LandingSection/LandingSection.jsx'
+import { PlaceholderOverlay } from './PlaceholderOverlay.jsx'
 import styles from './SceneOverlays.module.css'
 
-function PlaceholderOverlay({
-  entry,
+export function SceneOverlays({
+  entered,
   fallback,
-  index,
-  section,
-  sectionCount,
-  sectionIndex,
+  overlayRootRef,
+  predictionTestsOpen,
+  resultInspectionOpen,
+  resultInteractionRef,
+  selectedGeneticsSeed,
+  selectedPredictionCondition,
+  selectedResultClosingAction,
+  selectedResultView,
+  setPredictionTestsOpen,
+  setResultInspectionOpen,
+  setSelectedGeneticsSeed,
+  setSelectedPredictionCondition,
+  setSelectedResultClosingAction,
+  setSelectedResultView,
 }) {
-  const titleId = `scene-${index + 1}-section-${sectionIndex + 1}-title`
-  const label = section?.label ?? entry.label
-  const description = section?.description ?? entry.description
-
-  return (
-    <section
-      className={styles.placeholder}
-      data-scene-section
-      data-section-id={section?.id ?? 'main'}
-      data-section-index={sectionIndex}
-      data-section-label={label}
-      style={{
-        '--scene-accent': entry.accent,
-        background: fallback
-          ? entry.sceneProps?.sectionBackgrounds?.[section?.id]
-            ?? entry.sceneProps?.background
-          : undefined,
-      }}
-      aria-labelledby={titleId}
-      aria-hidden={fallback ? false : sectionIndex !== 0}
-      inert={fallback ? false : sectionIndex !== 0}
-    >
-      <header className={styles.header}>
-        <span>W / {String(index + 1).padStart(2, '0')}</span>
-        <span>{entry.chapter}</span>
-      </header>
-
-      <div className={styles.copy}>
-        <p className={styles.eyebrow}>
-          {sectionCount > 1
-            ? `Prototype section ${sectionIndex + 1} / ${sectionCount}`
-            : 'Prototype scene'}
-        </p>
-        <h2 id={titleId}>{label}</h2>
-        <p>{description}</p>
-      </div>
-
-      <p className={styles.hint}>Scroll · Swipe · Arrow keys</p>
-    </section>
-  )
-}
-
-export function SceneOverlays({ entered, fallback, overlayRootRef }) {
   return (
     <div
       className={`${styles.root} ${fallback ? styles.fallback : ''}`}
@@ -69,8 +37,10 @@ export function SceneOverlays({ entered, fallback, overlayRootRef }) {
           <div
             key={entry.id}
             className={styles.layer}
+            data-scene-id={entry.id}
             data-scene-index={index}
             data-scene-layer
+            data-seed-carousel-active="false"
             aria-hidden={fallback ? false : index !== 0}
             style={{
               background: fallback && index > 0
@@ -101,6 +71,19 @@ export function SceneOverlays({ entered, fallback, overlayRootRef }) {
                   section={section}
                   sectionCount={configuredSections.length}
                   sectionIndex={sectionIndex}
+                  predictionTestsOpen={predictionTestsOpen}
+                  resultInspectionOpen={resultInspectionOpen}
+                  resultInteractionRef={resultInteractionRef}
+                  selectedGeneticsSeed={selectedGeneticsSeed}
+                  selectedPredictionCondition={selectedPredictionCondition}
+                  selectedResultClosingAction={selectedResultClosingAction}
+                  selectedResultView={selectedResultView}
+                  setPredictionTestsOpen={setPredictionTestsOpen}
+                  setResultInspectionOpen={setResultInspectionOpen}
+                  setSelectedGeneticsSeed={setSelectedGeneticsSeed}
+                  setSelectedPredictionCondition={setSelectedPredictionCondition}
+                  setSelectedResultClosingAction={setSelectedResultClosingAction}
+                  setSelectedResultView={setSelectedResultView}
                 />
               ))
             )}

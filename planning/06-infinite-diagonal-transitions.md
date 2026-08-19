@@ -51,6 +51,7 @@ Each registry scene owns an optional sequence of internal timeline sections:
 
 ```js
 timeline: {
+  leadingHoldLength: 0.75,
   sections: [
     { id: 'overview', scrollLength: 1 },
     { id: 'detail', scrollLength: 1.5 },
@@ -64,6 +65,12 @@ their major portal scene fully visible and expose normalized scene, section,
 and section-progress values through the scene-state ref. The separate exit
 segment alone drives the diagonal compositor, so changing content length never
 stretches the wipe.
+
+An optional `leadingHoldLength` adds fully visible scroll padding before a
+scene's normal anchor without creating a narrative section or another portal.
+Both ends are semantic snap positions, and the first scene starts at its normal
+anchor after the hold. This lets reverse scrolling traverse scene-local camera
+choreography before reaching the previous scene's diagonal transition.
 
 The registry is compiled into one periodic list of section and transition
 segments. This was selected over scaling input sensitivity per scene, which
@@ -80,6 +87,40 @@ when configured lengths are fractional. Any new direct input cancels an
 in-progress settle, so direction reversal stays immediate. Reduced motion keeps
 direct input but applies both movement and the final settle without inertial
 interpolation.
+
+Scenes configured with `freeScroll: true` opt out of magnetic settling while
+their displayed position remains in that scene. Keyboard input advances through
+those scenes in small continuous increments instead of jumping to their
+beginning or end. Entering a free-scroll scene from a neighboring scene still
+settles to its semantic boundary, and its diagonal exit remains controlled by
+the same virtual position. Interior targets remain unsnapped. A free-scroll
+scene may configure `forwardExitResistance`; on its forward content boundary,
+the crossing gesture is consumed and the visible position is pinned before the
+diagonal. Subsequent same-direction input accumulates pressure until that
+threshold is met, then the adjacent transition completes. Reverse input cancels
+the detent immediately. A free-scroll scene may also configure
+`reverseEntryResistance`; when reverse input crosses its content start from
+inside the scene, that crossing is consumed and the fully visible scene is
+pinned at its start. A subsequent reverse push accumulates the small configured
+pressure and releases into the previous transition. Unconfigured boundaries
+retain the normal rules. These detents create deliberate scene-edge stops
+without letting wheel idle, touch release, reduced motion, or keyboard steps
+park on a partially visible diagonal.
+
+Free-scroll scenes may additionally define small directional
+`freeScrollSnapRanges`. When input comes to rest inside one of these ranges,
+the target settles to its configured local progress. Scene 2 uses a forward-only
+range for the seed-carousel arrival, ensuring the carousel finishes entering
+before the user pauses while preserving ordinary reverse scrolling through it.
+
+A fresh input or direction reversal during a diagonal transition commits to that
+transition's boundary in the requested direction. Repeated input already moving
+in the same direction continues accumulating through the boundary, so entering
+a free-scroll scene never discards wheel or touch travel. Scenes without internal
+content begin directly on their exit transition, so reverse input at one of those
+starting anchors targets the preceding transition's beginning. This keeps one
+reverse gesture sufficient even when the preceding scene contains a long
+free-scroll span.
 
 The frame-clock idle accumulator was selected over a browser timeout or CSS
 scroll snapping. It keeps one timing source, is deterministic in unit tests,

@@ -1,5 +1,6 @@
 export const LANDING_INTRO = {
   cameraInitialRadius: 9.5,
+  leadingHoldCameraOffsetY: 1.25,
   cameraSettledRadius: 7,
   cameraTransitionSpeed: 1.45,
   titleDelayMs: 550,

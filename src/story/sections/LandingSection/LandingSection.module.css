@@ -7,23 +7,6 @@
   color: #f5f1e7;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: rgb(245 241 231 / 62%);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  opacity: 0;
-  transform: translateY(-0.65rem);
-}
-
-.mark {
-  color: #e6bf54;
-}
-
 .copy {
   position: absolute;
   left: 50%;
@@ -61,6 +44,7 @@
   overflow: visible;
   pointer-events: none;
   user-select: none;
+  /* Starting state for the intro's left-to-right wipe reveal. */
   clip-path: inset(0 100% 0 0);
   opacity: 0;
 }
@@ -109,8 +93,13 @@
     cy 420ms cubic-bezier(0.22, 1, 0.36, 1),
     opacity 120ms linear;
   animation: title-particle-drift var(--particle-drift-duration) ease-in-out var(--particle-drift-delay) infinite alternate;
+  animation-play-state: paused;
   transform-box: fill-box;
   transform-origin: center;
+}
+
+.spotlightActive .titleParticles circle {
+  animation-play-state: running;
 }
 
 .titleParticles .linkedParticle {
@@ -151,7 +140,6 @@
   animation: title-reveal-left-to-right var(--title-reveal-duration) cubic-bezier(0.16, 1, 0.3, 1) var(--title-reveal-delay) forwards;
 }
 
-.entered .header,
 .entered .body {
   animation: supporting-content-reveal var(--supporting-content-duration) ease-out var(--supporting-content-delay) forwards;
 }
@@ -228,10 +216,6 @@
 }
 
 @media (max-width: 759px) {
-  .chapter {
-    display: none;
-  }
-
   .copy {
     top: 53%;
     width: 100vw;
@@ -253,7 +237,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .entered .titleGraphic,
-  .entered .header,
   .entered .body,
   .entered .hint {
     animation: none;
@@ -262,16 +245,16 @@
     transform: none;
   }
 
-  .titleParticles circle,
-  .hintLine::after {
-    animation: none;
-  }
-
   .titleParticles circle {
+    animation: none;
     transition: opacity 120ms linear;
   }
 
   .titleParticleLinks line {
     transition: opacity 160ms linear;
+  }
+
+  .hintLine::after {
+    animation: none;
   }
 }

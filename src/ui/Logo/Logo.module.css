@@ -1,0 +1,112 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.icon {
+  width: calc(1.15rem * var(--logo-scale, 1));
+  height: calc(2.3rem * var(--logo-scale, 1));
+  overflow: visible;
+}
+
+.wordmark {
+  height: calc(0.85rem * var(--logo-scale, 1));
+  width: auto;
+}
+
+/* Thin outline layer, drawn in full from the start — only its reveal
+   (via the clip-path wipe below) is animated. */
+.iconThin path {
+  fill: none;
+  stroke: rgb(230 191 84 / 55%);
+  stroke-width: 0.9;
+  stroke-linecap: round;
+}
+
+/* Thicker, solid layer that sweeps up right behind the thin outline and
+   overtakes it, reading as the shape "filling in". */
+.iconThick path {
+  fill: none;
+  stroke: #e6bf54;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+/* The reveal itself only ever animates `transform` on this clip-path rect —
+   a compositor-only property, so the sweep never touches the main thread
+   and stays smooth even while the WebGL scene is busy compiling shaders. */
+.iconWipeThin,
+.iconWipeThick {
+  transform: scaleY(0);
+  transform-origin: 12px 48px;
+}
+
+.iconWipeThin {
+  animation: icon-wipe 0.6s cubic-bezier(0.65, 0, 0.35, 1) 0s forwards;
+}
+
+.iconWipeThick {
+  animation: icon-wipe 0.55s cubic-bezier(0.65, 0, 0.35, 1) 0.4s forwards;
+}
+
+@keyframes icon-wipe {
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.word {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.34em;
+}
+
+.wordThin {
+  fill: none;
+  stroke: rgb(230 191 84 / 55%);
+  stroke-width: 0.7;
+}
+
+.wordThick {
+  fill: #f4eddd;
+  stroke: none;
+}
+
+.wordWipeThin,
+.wordWipeThick {
+  transform: scaleX(0);
+  transform-origin: 0 11px;
+}
+
+.wordWipeThin {
+  animation: word-wipe 0.7s cubic-bezier(0.65, 0, 0.35, 1) 0.55s forwards;
+}
+
+.wordWipeThick {
+  animation: word-wipe 0.6s cubic-bezier(0.65, 0, 0.35, 1) 0.95s forwards;
+}
+
+@keyframes word-wipe {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.reduced .iconWipeThin,
+.reduced .iconWipeThick,
+.reduced .wordWipeThin,
+.reduced .wordWipeThick {
+  animation: none;
+  transform: scaleY(1);
+}
+
+.reduced .wordWipeThin,
+.reduced .wordWipeThick {
+  transform: scaleX(1);
+}
+
+.reduced .iconThin {
+  opacity: 0;
+}

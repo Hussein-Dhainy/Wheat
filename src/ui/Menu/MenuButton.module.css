@@ -1,0 +1,42 @@
+.button {
+  display: grid;
+  gap: 0.32rem;
+  width: 1.6rem;
+  padding: 0.4rem 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+  transition: opacity 380ms cubic-bezier(0.65, 0, 0.35, 1),
+    transform 380ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.line {
+  display: block;
+  height: 2px;
+  background: #e6bf54;
+  border-radius: 1px;
+  transition: background 220ms ease;
+}
+
+.button:hover .line {
+  background: #f4eddd;
+}
+
+/* Fades and shrinks away once the full-screen menu takes over — the menu's
+   own close button handles dismissal from there. */
+.open {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.6) rotate(90deg);
+}
+
+.reduced {
+  transition: opacity 150ms linear;
+}
+
+.reduced.open {
+  transform: none;
+}
