@@ -6,8 +6,16 @@ import {
   getNearestResultViewRotation,
   snapResultView,
 } from '../../experience/scenes/result/resultInspection.js'
+import { TitleParticleText } from '../components/TitleParticleText/TitleParticleText.jsx'
 import styles from './SceneOverlays.module.css'
-import { RESULT_TITLE_LINES, SceneTitleLines } from './SceneTitleLines.jsx'
+import {
+  BOLD_TITLE_FONT_SIZE,
+  BOLD_TITLE_FONT_WEIGHT,
+  BOLD_TITLE_LETTER_SPACING,
+  BOLD_TITLE_LINE_HEIGHT,
+  RESULT_TITLE_BOX,
+  RESULT_TITLE_LINE_TEXTS,
+} from './sceneTitleBox.js'
 
 export function ResultExperience({
   resultInspectionOpen,
@@ -198,13 +206,21 @@ export function ResultExperience({
         >
         <div className={styles.resultCopy}>
           <p className={styles.eyebrow}>{RESULT_CONTENT.result.eyebrow}</p>
-          <h2 id="result-title" className={styles.visuallyHidden}>
-            {RESULT_CONTENT.result.title}
-          </h2>
-          <SceneTitleLines
+          <TitleParticleText
+            as="h2"
+            baseline={RESULT_TITLE_BOX.baseline}
             className={styles.resultTitleLines}
-            lines={RESULT_TITLE_LINES}
+            fontSize={BOLD_TITLE_FONT_SIZE}
+            fontWeight={BOLD_TITLE_FONT_WEIGHT}
+            headingId="result-title"
+            letterSpacing={BOLD_TITLE_LETTER_SPACING}
+            lineHeight={BOLD_TITLE_LINE_HEIGHT}
+            lines={RESULT_TITLE_LINE_TEXTS}
+            text={RESULT_CONTENT.result.title}
+            textAlign="left"
             textColor="#fff"
+            viewBoxHeight={RESULT_TITLE_BOX.viewBoxHeight}
+            viewBoxWidth={RESULT_TITLE_BOX.viewBoxWidth}
           />
           <p>{RESULT_CONTENT.result.body}</p>
         </div>
@@ -302,8 +318,21 @@ export function ResultExperience({
               data-selected={action.id === selectedResultClosingAction}
               onClick={() => openClosingDetail(action.id)}
             >
-              <span>{action.label}</span>
-              <span aria-hidden="true">↗</span>
+              <span className={styles.closingActionLabel}>
+                <span
+                  className={`${styles.closingActionIcon} ${styles.closingActionIconLeft}`}
+                  aria-hidden="true"
+                >
+                  ↗
+                </span>
+                {action.label}
+              </span>
+              <span
+                className={`${styles.closingActionIcon} ${styles.closingActionIconRight}`}
+                aria-hidden="true"
+              >
+                ↗
+              </span>
             </button>
           ))}
         </nav>

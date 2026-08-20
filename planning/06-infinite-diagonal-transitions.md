@@ -77,6 +77,20 @@ segments. This was selected over scaling input sensitivity per scene, which
 would make mapping depend on input history, and over registering subsections as
 scenes, which would add unwanted diagonal wipes and duplicate portal resources.
 
+### Continuous motion through transitions
+
+Narrative `progress` remains clamped from 0 to 1 so a diagonal wipe cannot
+prematurely trigger content stages or interactions. Each active scene also
+receives `motionProgress` and `transitionMotionOffset`. During a wipe, the
+outgoing scene continues beyond 1 while the incoming scene advances from a
+small negative value to 0. The same values run backward when input reverses.
+
+Per-scene `transitionMotion.entryDistance` and `exitDistance` values live in
+the timeline configuration. Cameras and decorative spatial systems consume
+`motionProgress`; narrative thresholds continue consuming `progress`. HTML
+overlay layers use the normalized transition offset for a matching restrained
+vertical continuation without introducing another animation clock.
+
 ### Magnetic idle snapping
 
 Wheel and touch input update the unbounded virtual position continuously. After

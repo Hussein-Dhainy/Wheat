@@ -417,11 +417,18 @@ export function PredictionScene({
 
     // Virtual scroll is already damped. Keeping camera progress linear avoids
     // a second ease that made the plant feel sticky at both ends of Scene 3.
-    const progress = MathUtils.clamp(
-      sceneStateRef.current.progress ?? 0,
-      0,
-      1,
-    )
+    const progress = reducedMotion
+      ? MathUtils.clamp(sceneStateRef.current.progress ?? 0, 0, 1)
+      : sceneStateRef.current.motionProgress
+        ?? sceneStateRef.current.progress
+        ?? 0
+    const exitProgress = reducedMotion
+      ? 0
+      : MathUtils.clamp(
+          sceneStateRef.current.transitionMotionOffset ?? 0,
+          0,
+          1,
+        )
     const cameraY = MathUtils.lerp(
       CONFIG.camera.startY,
       CONFIG.camera.endY,
@@ -442,8 +449,13 @@ export function PredictionScene({
           CONFIG.camera.parallax.damping,
           deltaTime,
         )
-    const pointerCameraY = Math.max(
+    const cameraMinimumY = MathUtils.lerp(
       CONFIG.camera.minimumY,
+      CONFIG.camera.exitMinimumY,
+      exitProgress,
+    )
+    const pointerCameraY = Math.max(
+      cameraMinimumY,
       cameraY + verticalPointerOffset.current,
     )
 

@@ -53,7 +53,10 @@ a {
 .experience-canvas {
   position: fixed;
   z-index: 2;
-  inset: 0;
+  /* One physical-pixel rounding gaps can appear where the fullscreen portal
+     compositor meets the viewport edge. Overscan vertically and let the app
+     shell crop it so the underlying page color cannot form a hairline. */
+  inset: -1px 0;
   pointer-events: none;
 }
 

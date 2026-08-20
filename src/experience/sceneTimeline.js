@@ -1,3 +1,5 @@
+import { DEFAULT_TRANSITION_MOTION_DISTANCE } from './sceneMotion.js'
+
 const DEFAULT_TRANSITION_LENGTH = 1
 const SNAP_EPSILON = 1e-10
 
@@ -114,6 +116,20 @@ export function compileSceneTimeline(registry) {
       `${sceneId}.timeline.exitTransitionLength`,
     )
 
+    const transitionMotion = timelineConfig.transitionMotion ?? {}
+    const transitionEntryDistance = transitionMotion.entryDistance
+      ?? DEFAULT_TRANSITION_MOTION_DISTANCE
+    const transitionExitDistance = transitionMotion.exitDistance
+      ?? DEFAULT_TRANSITION_MOTION_DISTANCE
+    assertNonnegativeLength(
+      transitionEntryDistance,
+      `${sceneId}.timeline.transitionMotion.entryDistance`,
+    )
+    assertNonnegativeLength(
+      transitionExitDistance,
+      `${sceneId}.timeline.transitionMotion.exitDistance`,
+    )
+
     const leadingHoldLength = timelineConfig.leadingHoldLength ?? 0
     assertNonnegativeLength(
       leadingHoldLength,
@@ -219,6 +235,8 @@ export function compileSceneTimeline(registry) {
       sections: Object.freeze(sections),
       start: sceneStart,
       transitionStart,
+      transitionEntryDistance,
+      transitionExitDistance,
     }))
   })
 

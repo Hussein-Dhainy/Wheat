@@ -15,7 +15,8 @@ void main() {
   float alpha = mix(coreAlpha, haloAlpha, uHalo)
     * uOpacity
     * vPulse
-    * vDepthFactor;
+    * vDepthFactor
+    * vShade;
 
-  gl_FragColor = vec4(uColor * vShade, alpha);
+  gl_FragColor = vec4(uColor, alpha);
 }

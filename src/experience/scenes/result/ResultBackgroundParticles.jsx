@@ -1,46 +1,57 @@
 import { useFrame } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
-import { AdditiveBlending, Color } from 'three'
+import {
+  Color,
+  MathUtils,
+  NormalBlending,
+  Vector2,
+  Vector3,
+} from 'three'
 import { advanceActiveSceneTime } from '../../activeSceneTime.js'
 import resultBackgroundParticleFragmentShader from './resultBackgroundParticleFragment.glsl?raw'
 import resultBackgroundParticleVertexShader from './resultBackgroundParticleVertex.glsl?raw'
+import { RESULT_SCENE_CONFIG as CONFIG } from './resultConfig.js'
 
-const PARTICLE_COUNT = 420
+const PARTICLE_COUNT = 260
 const PARTICLE_SEED = 34217
-const PARTICLE_OPACITY_SCALE = 0.42
+// Capped so the strongest particle still lands around 20% opacity — big and
+// blurred, but always visibly transparent against the backdrop.
+const PARTICLE_OPACITY_SCALE = 0.22
 
-// Weighted, overlapping regions create broad areas of activity around the
-// grain, mirroring the genetics scene's clustered background field.
+// Weighted, overlapping regions create broad areas of activity. The bulk of
+// the weight and the widest spreads sit in the lower-left quadrant, with
+// lighter, smaller accents elsewhere so the field still reaches across the
+// rest of the screen instead of stopping abruptly.
 const PARTICLE_CLUSTERS = [
   {
-    center: [-3.1, 1.9, -3.4],
-    sizeScale: 0.95,
-    spread: [2.6, 2.2, 1.8],
+    center: [-3.8, -2.4, -3.6],
+    sizeScale: 1.05,
+    spread: [4.6, 3.6, 2.4],
+    weight: 0.34,
+  },
+  {
+    center: [-1.9, -3.4, -4.1],
+    sizeScale: 1.0,
+    spread: [4.0, 2.8, 2.2],
     weight: 0.24,
   },
   {
-    center: [-2.6, -2.1, -3.9],
-    sizeScale: 1.05,
-    spread: [2.4, 2.1, 1.9],
-    weight: 0.22,
+    center: [-3.2, 2.2, -4.0],
+    sizeScale: 0.85,
+    spread: [3.2, 2.6, 2.0],
+    weight: 0.16,
   },
   {
-    center: [3.3, 2.1, -3.2],
-    sizeScale: 0.92,
-    spread: [2.3, 2.0, 1.7],
-    weight: 0.22,
+    center: [3.0, 0.3, -3.4],
+    sizeScale: 0.85,
+    spread: [2.8, 2.8, 2.0],
+    weight: 0.14,
   },
   {
-    center: [2.9, -2.3, -3.7],
-    sizeScale: 1.0,
-    spread: [2.5, 2.2, 1.9],
-    weight: 0.22,
-  },
-  {
-    center: [0.2, 3.5, -4.6],
-    sizeScale: 0.7,
-    spread: [3.4, 1.1, 1.7],
-    weight: 0.1,
+    center: [0.4, 3.6, -4.8],
+    sizeScale: 0.68,
+    spread: [4.8, 1.3, 1.8],
+    weight: 0.12,
   },
 ]
 
@@ -81,7 +92,10 @@ function createParticleAttributes() {
 
     const cluster = chooseWeightedCluster(random)
     const clusterAngle = random() * Math.PI * 2
-    const clusterRadius = Math.pow(random(), 1.65)
+    // A gentler falloff than before (1.65 -> 1.15) fills each cluster's
+    // spread more evenly instead of clumping most particles near its
+    // center, so the wider spread values above actually read as spread out.
+    const clusterRadius = Math.pow(random(), 1.15)
     const depthOffset = (random() - 0.5) * 0.3
 
     positions[positionIndex] = cluster.center[0]
@@ -111,10 +125,10 @@ function createParticleAttributes() {
         ? 0.55 + random() * 0.3
         : 0.94 + random() * 0.06
 
-    sizes[particleIndex] = (2.5 + Math.pow(random(), 1.75) * 44)
+    sizes[particleIndex] = (34 + Math.pow(random(), 1.6) * 132)
       * cluster.sizeScale
     opacities[particleIndex] = (
-      0.12 + Math.pow(random(), 1.65) * 0.46
+      0.32 + Math.pow(random(), 1.5) * 0.58
     ) * PARTICLE_OPACITY_SCALE
     phases[particleIndex] = random() * Math.PI * 2
     driftSpeeds[particleIndex] = 0.07 + random() * 0.1
@@ -132,16 +146,47 @@ function createParticleAttributes() {
   }
 }
 
-export default function ResultBackgroundParticles({ reducedMotion, sceneStateRef }) {
+export default function ResultBackgroundParticles({
+  pointerRef,
+  reducedMotion,
+  sceneStateRef,
+}) {
   const activeTime = useRef(0)
   const materialReference = useRef()
+  const pointerOffset = useRef({ x: 0, y: 0 })
   const attributes = useMemo(createParticleAttributes, [])
   const uniforms = useMemo(() => ({
     uDeepTeal: { value: new Color('#0b3f34') },
+    uFieldCenter: {
+      value: new Vector3(...CONFIG.atmosphere.backgroundParticles.fieldCenter),
+    },
     uGold: { value: new Color('#efb44b') },
     uIvory: { value: new Color('#f6ead0') },
+    uMotionScale: {
+      value: CONFIG.atmosphere.backgroundParticles.motionScale,
+    },
     uPixelRatio: { value: 1 },
+    uPointer: { value: new Vector2() },
+    uPointerRange: {
+      value: new Vector3(...CONFIG.atmosphere.backgroundParticles.pointerRange),
+    },
+    uPointerRotation: {
+      value: new Vector3(
+        ...CONFIG.atmosphere.backgroundParticles.pointerRotation,
+      ),
+    },
+    uScrollProgress: { value: 0 },
+    uScrollMotionScale: {
+      value: CONFIG.atmosphere.backgroundParticles.scrollMotionScale,
+    },
+    uScrollRotation: {
+      value: new Vector3(...CONFIG.atmosphere.backgroundParticles.scrollRotation),
+    },
+    uScrollTravel: {
+      value: new Vector3(...CONFIG.atmosphere.backgroundParticles.scrollTravel),
+    },
     uTime: { value: 0 },
+    uYaw: { value: 0 },
   }), [])
 
   useFrame(({ gl }, deltaTime) => {
@@ -159,10 +204,44 @@ export default function ResultBackgroundParticles({ reducedMotion, sceneStateRef
     materialReference.current.uniforms.uTime.value = reducedMotion
       ? 0
       : activeTime.current
+    materialReference.current.uniforms.uYaw.value = reducedMotion
+      ? 0
+      : Math.sin(
+        activeTime.current * CONFIG.atmosphere.backgroundParticles.idleYawSpeed,
+      ) * CONFIG.atmosphere.backgroundParticles.idleYawRange
+
+    const pointer = pointerRef?.current
+    const targetPointerX = reducedMotion ? 0 : pointer?.ndcX ?? 0
+    const targetPointerY = reducedMotion ? 0 : pointer?.ndcY ?? 0
+    pointerOffset.current.x = MathUtils.damp(
+      pointerOffset.current.x,
+      targetPointerX,
+      CONFIG.atmosphere.backgroundParticles.pointerDamping,
+      deltaTime,
+    )
+    pointerOffset.current.y = MathUtils.damp(
+      pointerOffset.current.y,
+      targetPointerY,
+      CONFIG.atmosphere.backgroundParticles.pointerDamping,
+      deltaTime,
+    )
+    materialReference.current.uniforms.uPointer.value.set(
+      pointerOffset.current.x,
+      pointerOffset.current.y,
+    )
+    materialReference.current.uniforms.uScrollProgress.value = reducedMotion
+      ? 0
+      : sceneStateRef.current.motionProgress
+        ?? sceneStateRef.current.progress
+        ?? 0
   })
 
   return (
-    <points frustumCulled={false} renderOrder={-1}>
+    <points
+      frustumCulled={false}
+      position={CONFIG.atmosphere.backgroundParticles.position}
+      renderOrder={-1}
+    >
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
@@ -202,7 +281,7 @@ export default function ResultBackgroundParticles({ reducedMotion, sceneStateRef
         uniforms={uniforms}
         vertexShader={resultBackgroundParticleVertexShader}
         fragmentShader={resultBackgroundParticleFragmentShader}
-        blending={AdditiveBlending}
+        blending={NormalBlending}
         depthWrite={false}
         transparent
       />

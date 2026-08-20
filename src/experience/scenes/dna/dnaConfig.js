@@ -1,4 +1,5 @@
 export const DNA_RENDER_CONFIG = {
+  transitionTravel: 1.4,
   entry: {
     // Durations are real seconds and apply in both directions: Scene 2 fades
     // and rotates in on entry, then runs the same animation backward on exit.
@@ -99,6 +100,7 @@ export const DNA_RENDER_CONFIG = {
     depthRange: [-1.25, 1.35],
     streamScrollRange: [0.42, 0.8],
     streamTravel: 17,
+    transitionTravel: 2.2,
     streamYRange: [-3.5, -13.5],
     streamRotationSpeed: [0.06, 0.16],
     carousel: {

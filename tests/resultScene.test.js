@@ -5,6 +5,10 @@ import { RESULT_CONTENT } from '../src/config/resultContent.js'
 import { SCENE_TIMELINE } from '../src/config/sceneTimeline.js'
 import { RESULT_SCENE_CONFIG } from '../src/experience/scenes/result/resultConfig.js'
 import {
+  createNetworkData,
+  smootherRange,
+} from '../src/experience/scenes/result/resultGeometry.js'
+import {
   getNearestResultViewRotation,
   getResultOrbitMarkerAngle,
   snapResultView,
@@ -13,7 +17,7 @@ import {
 test('Scene 5 uses one continuous result journey before returning to landing', () => {
   const resultScene = SCENE_TIMELINE.scenes.find((scene) => scene.id === 'result')
 
-  assert.equal(resultScene.contentLength, 2)
+  assert.equal(resultScene.contentLength, 1)
   assert.equal(resultScene.freeScroll, true)
   assert.deepEqual(resultScene.sections.map((section) => section.id), ['result-journey'])
   assert.equal(resultScene.exitTransitionLength, 1)
@@ -69,4 +73,36 @@ test('each snapped orbit marker resolves to the camera-facing phase', () => {
     const markerAngle = getResultOrbitMarkerAngle(viewIndex, step)
     assert.ok(Math.abs(markerAngle - viewIndex * step - Math.PI / 2) < 1e-10)
   }
+})
+
+test('the result network is a deterministic forest of overlapping constellations', () => {
+  const network = createNetworkData()
+  const repeatedNetwork = createNetworkData()
+
+  assert.equal(network.constellationCount, RESULT_SCENE_CONFIG.network.clusterCount)
+  assert.equal(
+    network.connectionCount,
+    network.nodeCount - network.constellationCount,
+    'each constellation should be a separate tree with no cross-connections',
+  )
+  assert.ok(network.connectorPositions.length / 3 > network.nodeCount * 4)
+  assert.deepEqual(network.pointPositions, repeatedNetwork.pointPositions)
+  assert.deepEqual(network.connectorPositions, repeatedNetwork.connectorPositions)
+})
+
+test('connector opacity waves are stronger than the large-node pulse', () => {
+  const network = RESULT_SCENE_CONFIG.network
+
+  assert.ok(network.pulseSpeed > 0)
+  assert.ok(network.connectorPulseStrength > network.nodePulseStrength)
+  assert.ok(network.connectorPulseStrength <= 1)
+  assert.ok(network.nodePulseStrength >= 0)
+})
+
+test('the closing background palette resolves from scene progress', () => {
+  const range = RESULT_SCENE_CONFIG.atmosphere.closingBackgroundRange
+
+  assert.equal(smootherRange(range[0], range), 0)
+  assert.equal(smootherRange(range[1], range), 1)
+  assert.ok(smootherRange((range[0] + range[1]) / 2, range) > 0)
 })

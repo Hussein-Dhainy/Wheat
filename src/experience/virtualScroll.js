@@ -170,11 +170,23 @@ function getFreeScrollTarget(state) {
 
   const timelinePosition = resolveSceneTimeline(state.current, state.timeline)
   const scene = state.timeline.scenes[timelinePosition.currentIndex]
-  if (timelinePosition.phase !== 'section' || !scene?.freeScroll) return null
+  if (!scene?.freeScroll) return null
 
   const cycleStart = timelinePosition.cycleIndex * state.timeline.cycleLength
   const contentStart = cycleStart + scene.start
   const contentEnd = cycleStart + scene.transitionStart
+
+  // `current` eases toward `target` every frame, so a reversal right at a
+  // scene boundary can drift `current` a hair into the exit transition
+  // before input goes idle. Once inside the transition span, `target` sits
+  // past `contentEnd` regardless of which way the gesture is headed, so the
+  // numeric checks below can't disambiguate — direction has to decide which
+  // end of the transition to settle back on.
+  if (timelinePosition.phase === 'transition') {
+    return state.inputDirection < 0 ? contentEnd : cycleStart + scene.end
+  }
+
+  if (timelinePosition.phase !== 'section') return null
 
   if (state.target > contentEnd) {
     return cycleStart + scene.end
@@ -337,13 +349,6 @@ export function addVirtualScrollDelta(state, delta) {
   if (state.timeline.scenes.length > 0) {
     const timelinePosition = resolveSceneTimeline(state.current, state.timeline)
     const scene = state.timeline.scenes[timelinePosition.currentIndex]
-    const pendingDirection = Math.sign(state.target - state.current)
-    const isTransitioning = timelinePosition.phase === 'transition'
-      && timelinePosition.progress > 0.0001
-      && (
-        pendingDirection === 0
-        || pendingDirection !== inputDirection
-      )
     const isAtEmptySceneStart = inputDirection < 0
       && timelinePosition.phase === 'transition'
       && scene.contentLength === 0
@@ -387,23 +392,24 @@ export function addVirtualScrollDelta(state, delta) {
       }
     }
 
-    if (isTransitioning || isAtEmptySceneStart) {
+    // Direct scroll input while mid-transition used to force-jump the
+    // target straight to that transition's boundary instead of letting the
+    // normal "direct input always wins over an in-progress magnetic settle"
+    // path below take over — which meant an idle-snap firing mid-transition
+    // (e.g. from a brief pause between wheel ticks) couldn't be scrolled
+    // past smoothly; continuing to scroll kept getting redirected to a
+    // fixed endpoint. Only the empty-scene-start wraparound case (landing,
+    // whose zero-length content needs to jump straight to the previous
+    // scene) still needs this early, fixed-target handling.
+    if (isAtEmptySceneStart) {
       let targetCycleIndex = timelinePosition.cycleIndex
-      let targetPosition
-
-      if (isAtEmptySceneStart) {
-        const previousSceneIndex = (
-          timelinePosition.currentIndex - 1 + state.timeline.scenes.length
-        ) % state.timeline.scenes.length
-        if (previousSceneIndex > timelinePosition.currentIndex) {
-          targetCycleIndex -= 1
-        }
-        targetPosition = state.timeline.scenes[previousSceneIndex].transitionStart
-      } else {
-        targetPosition = inputDirection < 0
-          ? scene.transitionStart
-          : scene.end
+      const previousSceneIndex = (
+        timelinePosition.currentIndex - 1 + state.timeline.scenes.length
+      ) % state.timeline.scenes.length
+      if (previousSceneIndex > timelinePosition.currentIndex) {
+        targetCycleIndex -= 1
       }
+      const targetPosition = state.timeline.scenes[previousSceneIndex].transitionStart
 
       state.target = targetCycleIndex * state.timeline.cycleLength
         + targetPosition

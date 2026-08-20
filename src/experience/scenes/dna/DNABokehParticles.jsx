@@ -165,10 +165,10 @@ export default function DNABokehParticles({
 
     if (!sceneStateRef?.current?.isActive) return
 
-    const sceneProgress = Math.min(
-      1,
-      Math.max(0, sceneStateRef.current.progress),
-    )
+    const sceneProgress = reducedMotion
+      ? Math.min(1, Math.max(0, sceneStateRef.current.progress))
+      : sceneStateRef.current.motionProgress
+        ?? sceneStateRef.current.progress
     const entryFlowProgress = (entryFlowRef?.current ?? 0)
       * DNA_RENDER_CONFIG.particleFlow.entryProgress
     materialReference.current.uniforms.uScrollProgress.value = (

@@ -33,7 +33,9 @@
   inset: 0;
   opacity: 0;
   pointer-events: none;
+  transform: translate3d(0, var(--transition-motion-y, 0), 0);
   visibility: hidden;
+  will-change: transform;
 }
 
 .layer > [data-scene-section]:first-child {
@@ -46,7 +48,14 @@
   min-height: 100svh;
   opacity: 1 !important;
   pointer-events: auto !important;
+  transform: none !important;
   visibility: visible !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layer > [data-scene-section] {
+    transform: none;
+  }
 }
 
 .placeholder {
@@ -254,21 +263,10 @@
 
 .predictionCopy {
   position: absolute;
-  top: clamp(3rem, 9vh, 6.5rem);
+  top: 50%;
   left: clamp(1.75rem, 7.8vw, 9.5rem);
-  width: min(40rem, 43vw);
-}
-
-.predictionCopy h2 {
-  max-width: 10ch;
-  margin: 0;
-  color: #fff;
-  font-size: clamp(3.25rem, 5.8vw, 6.75rem);
-  font-weight: 500;
-  letter-spacing: -0.052em;
-  line-height: 0.92;
-  text-transform: uppercase;
-  text-wrap: balance;
+  width: min(46rem, 50vw);
+  transform: translateY(-50%);
 }
 
 /* TitleParticleText renders the visible titles below (prediction, field,
@@ -285,20 +283,26 @@
   border: 0;
 }
 
-.predictionTitleLines,
-.fieldTitleLines,
-.resultTitleLines {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  max-width: 100%;
+/* Scenes 3-5's titles are each one continuous headline (TitleParticleText's
+   own multi-line mode), not a stacked column of independent lines — each
+   box is sized here to sit a bit under half its container's width, so the
+   text wraps naturally where it visually should. */
+.predictionTitleLines {
+  display: block;
+  width: min(42rem, 45vw);
   margin-bottom: 0.5rem;
 }
 
-.predictionTitleLines > *,
-.fieldTitleLines > *,
-.resultTitleLines > * {
-  max-width: 100%;
+.fieldTitleLines {
+  display: block;
+  width: min(46rem, 43vw);
+  margin-bottom: 0.5rem;
+}
+
+.resultTitleLines {
+  display: block;
+  width: min(40rem, 41vw);
+  margin-bottom: 0.5rem;
 }
 
 .predictionCopy p {
@@ -844,6 +848,7 @@
     top: 18vh;
     left: 1.5rem;
     width: min(31rem, calc(100vw - 3rem));
+    transform: none;
   }
 
   .predictionCopy h2 {
@@ -934,40 +939,70 @@
 .resultJourney {
   position: absolute;
   inset: 0;
-  display: flex;
-  height: 200vh;
-  flex-direction: column;
   pointer-events: none;
-  /* The 3D grain (ResultScene.jsx, CONFIG.grain.exitRange) finishes moving
-     away by section-progress 0.72. The closing page's slide-in and the
-     grain copy's fade-out both derive from this single value so they stay
-     in lockstep with each other and only start once the grain is gone,
-     instead of three independently-timed animations drifting apart. */
-  --closing-reveal: clamp(0, calc((var(--section-progress, 0) - 0.72) / 0.22), 1);
-  transform: translateY(calc(var(--closing-reveal) * -100vh));
-  will-change: transform;
+  /* The result layer already travels with the shared scene wipe. Add a
+     stronger copy of that signed offset to the closing panel so its
+     full-screen entrance transform cannot make the 5 -> 1 exit feel static. */
+  --result-transition-motion-y: calc(
+    var(--transition-motion-y, 0px)
+    + var(--transition-motion-y, 0px)
+  );
+  /* The end of both ranges (0.8) must match CONFIG.grain.
+     travelProgressRange[1] in resultConfig.js — the point where the
+     grain's scroll travel finishes and it's no longer in view. Opacity and
+     the slide are split into two separate ramps on purpose: opacity
+     catches up fast (0.3 to 0.4) so the panel is actually legible well
+     before it's finished sliding into place, while the slide itself still
+     takes the full window (0.3 to 0.8) to land in sync with the grain
+     disappearing. Tying both to the same slow ramp read as an empty gap —
+     the panel was simultaneously too faint and too far off-screen to
+     notice for most of the window, even though it was technically already
+     "revealing". */
+  --closing-opacity: clamp(0, calc((var(--section-progress, 0) - 0.2) / 0.1), 1);
+  --closing-slide: clamp(0, calc((var(--section-progress, 0) - 0.2) / 0.5), 1);
 }
 
 .fallback .resultJourney {
   position: relative;
   height: auto;
-  transform: none !important;
 }
 
-/* Scene 5: final selection and closing actions. These rules intentionally
-   follow the earlier prototype styles so they fully replace that treatment. */
+/* Scene 5: the grain/inspection panel fades out as the closing actions
+   fade in, once the grain has scrolled out of view. They occupy different
+   screen regions (button top-right, closing actions centered), so a
+   simple crossfade doesn't superimpose any text. */
 .resultExperience,
 .resultClosingExperience {
-  position: relative;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  min-height: 100vh;
-  flex: 0 0 100vh;
   overflow: hidden;
   pointer-events: none;
 }
 
+.fallback .resultExperience,
+.fallback .resultClosingExperience {
+  position: relative;
+  inset: auto;
+  min-height: 100svh;
+  transform: none !important;
+}
+
 .resultExperience {
-  opacity: calc(1 - var(--closing-reveal));
+  opacity: calc(1 - var(--closing-opacity));
+}
+
+.resultClosingExperience {
+  opacity: var(--closing-opacity);
+  transform: translateY(calc(
+    (1 - var(--closing-slide)) * 100%
+    + var(--result-transition-motion-y)
+  ));
+  will-change: transform;
+}
+
+.fallback .resultClosingExperience {
+  opacity: 1;
 }
 
 .resultIntro,
@@ -1170,6 +1205,11 @@
   top: 50%;
   left: clamp(2.75rem, 8vw, 10rem);
   width: min(48rem, 46vw);
+  opacity: var(--copy-reveal, 1);
+  transform: translate(calc((1 - var(--copy-reveal, 1)) * -1.5rem), -49%);
+}
+
+.fallback .resultCopy {
   opacity: 1;
   transform: translateY(-49%);
 }
@@ -1331,11 +1371,12 @@
 }
 
 .closingActions button {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  position: relative;
+  display: flex;
+  justify-content: center;
   align-items: center;
-  min-height: clamp(4.7rem, 10vh, 7rem);
-  padding: 0 0.75rem;
+  min-height: clamp(6rem, 14vh, 10rem);
+  padding: 0 clamp(1.8rem, 2.6vw, 2.5rem);
   color: #fff;
   font: inherit;
   font-size: clamp(1.75rem, 3vw, 3.75rem);
@@ -1345,13 +1386,10 @@
   text-transform: uppercase;
   background: transparent;
   border: 0;
-  border-bottom: 1px solid rgb(119 204 173 / 12%);
   cursor: pointer;
   pointer-events: auto;
   transition:
     color 200ms ease,
-    padding-left 240ms ease,
-    border-color 200ms ease,
     opacity 300ms ease,
     filter 400ms ease,
     transform 520ms cubic-bezier(0.2, 0.72, 0.2, 1);
@@ -1369,26 +1407,74 @@
   transform: scale(1.32);
 }
 
-.closingActions button:first-child {
-  border-top: 1px solid rgb(119 204 173 / 12%);
+.closingActionLabel {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  text-align: center;
+  transition: transform 900ms cubic-bezier(0.2, 0.72, 0.2, 1);
 }
 
-.closingActions button span:last-child {
+.closingActionLabel::after {
+  position: absolute;
+  right: 0;
+  bottom: -0.18em;
+  left: 0;
+  height: 1px;
+  background: rgb(119 204 173 / 32%);
+  content: '';
+  transition: background-color 300ms ease;
+}
+
+.closingActionIcon {
   color: rgb(255 255 255 / 72%);
   font-size: 0.38em;
-  transition: transform 220ms ease;
+  line-height: 1;
+  transition:
+    opacity 320ms ease,
+    transform 700ms cubic-bezier(0.2, 0.72, 0.2, 1);
+}
+
+.closingActionIconRight {
+  position: absolute;
+  right: 0.75rem;
+  opacity: 1;
+}
+
+.closingActionIconLeft {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 0.75em);
+  opacity: 0;
+  transform: translate(-0.45rem, -50%);
 }
 
 .closingActions button:hover,
 .closingActions button:focus-visible {
   color: #f3cb65;
-  padding-left: 1.25rem;
-  border-color: rgb(119 204 173 / 38%);
 }
 
-.closingActions button:hover span:last-child,
-.closingActions button:focus-visible span:last-child {
-  transform: translate(0.3rem, -0.3rem);
+.closingActions button:hover .closingActionLabel::after,
+.closingActions button:focus-visible .closingActionLabel::after {
+  background: rgb(119 204 173 / 58%);
+}
+
+.closingActions button:hover .closingActionLabel,
+.closingActions button:focus-visible .closingActionLabel {
+  transform: translateX(clamp(1rem, 1.5vw, 1.5rem));
+}
+
+.closingActions button:hover .closingActionIconRight,
+.closingActions button:focus-visible .closingActionIconRight {
+  opacity: 0;
+  transform: translate(0.45rem, -0.25rem);
+}
+
+.closingActions button:hover .closingActionIconLeft,
+.closingActions button:focus-visible .closingActionIconLeft {
+  opacity: 1;
+  transform: translate(0, -50%);
+  transition-delay: 260ms;
 }
 
 .closingFooter {
@@ -1555,8 +1641,8 @@
 
   .closingActions button {
     min-height: clamp(4rem, 11vh, 5.5rem);
-    padding-right: 0.3rem;
-    padding-left: 0.3rem;
+    padding-right: 1.6rem;
+    padding-left: 1.6rem;
     font-size: clamp(1.35rem, 6.5vw, 2rem);
     line-height: 1.05;
   }
@@ -1572,6 +1658,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .resultJourney {
+    --result-transition-motion-y: 0px;
+  }
+
   .resultOrbitAction::before {
     animation: none;
   }
@@ -1584,7 +1674,9 @@
   .closingDetail,
   .closingFooter,
   .closingActions button,
-  .closingActions button span:last-child {
+  .closingActionLabel,
+  .closingActionLabel::after,
+  .closingActionIcon {
     transition: none;
   }
 

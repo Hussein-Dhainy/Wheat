@@ -1,6 +1,10 @@
 import { LinearFilter, WebGLRenderTarget } from 'three'
 import { GENETICS_SEED_TIMING } from '../config/geneticsSeeds.js'
 import { getDiagonalBounds } from './sceneMath.js'
+import {
+  applyIncomingSceneMotion,
+  applyOutgoingSceneMotion,
+} from './sceneMotion.js'
 import { SCENE_COUNT, SCENE_REGISTRY } from './SceneRegistry.js'
 
 export const DIAGONAL_TRANSITION = {
@@ -33,12 +37,14 @@ export function createSceneState(index) {
       isEntering: index === 1,
       isLeaving: false,
       leadingHoldProgress: 1,
+      motionProgress: index === 0 ? 1 : 0,
       phase: index === 0 ? 'transition' : 'inactive',
       progress: index === 0 ? 1 : 0,
       sectionId: null,
       sectionIndex: -1,
       sectionProgress: index === 0 ? 1 : 0,
       transitionProgress: 0,
+      transitionMotionOffset: 0,
       visibility: index === 0 ? 1 : 0,
     },
   }
@@ -51,18 +57,21 @@ export function updateSceneStates(sceneStateRefs, transition, direction, timelin
     state.isEntering = false
     state.isLeaving = false
     state.leadingHoldProgress = 1
+    state.motionProgress = 0
     state.phase = 'inactive'
     state.progress = 0
     state.sectionId = null
     state.sectionIndex = -1
     state.sectionProgress = 0
     state.transitionProgress = 0
+    state.transitionMotionOffset = 0
     state.visibility = 0
     state.direction = direction
   })
 
   const sceneA = sceneStateRefs[transition.currentIndex].current
   const sceneB = sceneStateRefs[transition.nextIndex].current
+  const currentTimelineScene = timeline.scenes[transition.currentIndex]
 
   sceneA.isActive = true
   sceneA.leadingHoldProgress = transition.leadingHoldProgress
@@ -73,6 +82,13 @@ export function updateSceneStates(sceneStateRefs, transition, direction, timelin
   sceneA.sectionIndex = transition.sectionIndex
   sceneA.sectionProgress = transition.sectionProgress
   sceneA.transitionProgress = transition.progress
+  applyOutgoingSceneMotion(
+    sceneA,
+    transition.phase,
+    transition.sceneProgress,
+    transition.progress,
+    currentTimelineScene.transitionExitDistance,
+  )
 
   const nextTimelineScene = timeline.scenes[transition.nextIndex]
   const firstNextSection = nextTimelineScene.sections[0] ?? null
@@ -85,6 +101,12 @@ export function updateSceneStates(sceneStateRefs, transition, direction, timelin
   sceneB.sectionIndex = firstNextSection?.index ?? -1
   sceneB.sectionProgress = 0
   sceneB.transitionProgress = transition.progress
+  applyIncomingSceneMotion(
+    sceneB,
+    transition.phase,
+    transition.progress,
+    nextTimelineScene.transitionEntryDistance,
+  )
 
   if (transition.phase !== 'transition') return
 
@@ -181,15 +203,36 @@ export function updateOverlayLayers(root, cache, transition) {
   }
 
   const currentLayer = layers[transition.currentIndex]
+  const nextLayer = layers[transition.nextIndex]
+  const transitionMotionProgress = transition.phase === 'transition'
+    ? transition.progress
+    : 0
+  const currentMotionOffset = transitionMotionProgress
+  const nextMotionOffset = transition.phase === 'transition'
+    ? transition.progress - 1
+    : 0
   currentLayer.dataset.sceneContentProgress = transition.sceneProgress.toFixed(4)
+  currentLayer.dataset.transitionMotionOffset = currentMotionOffset.toFixed(4)
   currentLayer.dataset.sectionId = transition.sectionId ?? ''
   currentLayer.dataset.sectionIndex = String(currentSectionIndex)
   currentLayer.dataset.sectionProgress = transition.sectionProgress.toFixed(4)
   currentLayer.style.setProperty('--scene-progress', transition.sceneProgress)
   currentLayer.style.setProperty('--section-progress', transition.sectionProgress)
   currentLayer.style.setProperty(
+    '--transition-motion-y',
+    `${currentMotionOffset * -4}vh`,
+  )
+  currentLayer.style.setProperty(
     '--scene-scroll-offset',
     `${transition.sceneProgress * -100}vh`,
+  )
+  nextLayer.dataset.sceneContentProgress = '0.0000'
+  nextLayer.dataset.transitionMotionOffset = nextMotionOffset.toFixed(4)
+  nextLayer.style.setProperty('--scene-progress', 0)
+  nextLayer.style.setProperty('--section-progress', 0)
+  nextLayer.style.setProperty(
+    '--transition-motion-y',
+    `${nextMotionOffset * -4}vh`,
   )
 
   layers.forEach((layer, index) => {

@@ -85,6 +85,7 @@ export function createNetworkData() {
   const connectorDriftSpeeds = []
   const connectorDriftAmplitudes = []
   const connectorShadeFactors = []
+  let connectionCount = 0
 
   const getDepthFactor = (depth) => MathUtils.lerp(
     0.48,
@@ -107,6 +108,7 @@ export function createNetworkData() {
   }
 
   const addDottedConnection = (start, end, phaseOffset, drift) => {
+    connectionCount += 1
     const distance = Math.hypot(
       end[0] - start[0],
       end[1] - start[1],
@@ -132,37 +134,65 @@ export function createNetworkData() {
       connectorDriftPhases.push(drift.phase)
       connectorDriftSpeeds.push(drift.speed)
       connectorDriftAmplitudes.push(...drift.amplitude)
-      connectorShadeFactors.push(MathUtils.lerp(0.76, 0.96, random()))
+      // This seeded factor is consumed as opacity in the particle shader,
+      // giving the denser dotted connectors a varied, less uniform rhythm.
+      connectorShadeFactors.push(MathUtils.lerp(0.34, 1, random()))
     }
   }
 
+  const coreClusterCount = Math.round(
+    CONFIG.network.clusterCount * CONFIG.network.coreClusterRatio,
+  )
+
+  // Build a forest of independent constellations. The compact core and the
+  // longer outer groups overlap in projection, but no edge ever crosses from
+  // one constellation to another.
   for (let clusterIndex = 0; clusterIndex < CONFIG.network.clusterCount; clusterIndex += 1) {
-    const verticalProgress = clusterIndex
-      / Math.max(1, CONFIG.network.clusterCount - 1)
+    const isCoreCluster = clusterIndex < coreClusterCount
+    const horizontalRange = isCoreCluster
+      ? CONFIG.network.coreHorizontalRange
+      : CONFIG.network.tendrilHorizontalRange
+    const clusterHeight = isCoreCluster
+      ? CONFIG.network.coreHeight
+      : CONFIG.network.tendrilHeight
+    const radiusRange = isCoreCluster
+      ? CONFIG.network.coreRadiusRange
+      : CONFIG.network.tendrilRadiusRange
+    // Averaging two samples concentrates the core around the grain's middle
+    // while the tendrils retain the full, sparse vertical envelope.
+    const verticalSample = isCoreCluster
+      ? (random() + random()) * 0.5
+      : random()
     const centerX = MathUtils.lerp(
-      CONFIG.network.horizontalRange[0],
-      CONFIG.network.horizontalRange[1],
+      horizontalRange[0],
+      horizontalRange[1],
       random(),
     )
     const centerY = MathUtils.lerp(
-      -CONFIG.network.height / 2,
-      CONFIG.network.height / 2,
-      verticalProgress,
-    ) + MathUtils.lerp(
-      -CONFIG.network.verticalJitter,
-      CONFIG.network.verticalJitter,
+      -clusterHeight / 2,
+      clusterHeight / 2,
+      verticalSample,
+    )
+    const centerZ = MathUtils.lerp(
+      -CONFIG.network.wrapDepth,
+      CONFIG.network.wrapDepth,
       random(),
     )
-    const centerZ = Math.sin(verticalProgress * Math.PI * 2.35 - 0.65)
-      * CONFIG.network.wrapDepth
     const radius = MathUtils.lerp(
-      CONFIG.network.clusterRadiusRange[0],
-      CONFIG.network.clusterRadiusRange[1],
+      radiusRange[0],
+      radiusRange[1],
       random(),
     )
-    const stretch = clusterIndex % CONFIG.network.longClusterEvery === 0
-      ? CONFIG.network.longClusterStretch
-      : 1
+    const stretch = MathUtils.lerp(
+      CONFIG.network.radialStretchRange[0],
+      CONFIG.network.radialStretchRange[1],
+      random(),
+    ) * (isCoreCluster ? 0.78 : 1)
+    const nodeCount = Math.floor(MathUtils.lerp(
+      CONFIG.network.nodesPerClusterRange[0],
+      CONFIG.network.nodesPerClusterRange[1] + 1,
+      random(),
+    ))
     const rotation = random() * Math.PI * 2
     const amplitude = MathUtils.lerp(
       CONFIG.network.driftAmplitudeRange[0],
@@ -184,26 +214,38 @@ export function createNetworkData() {
     }
     const clusterNodes = []
 
-    for (let nodeIndex = 0; nodeIndex < CONFIG.network.nodesPerCluster; nodeIndex += 1) {
+    for (let nodeIndex = 0; nodeIndex < nodeCount; nodeIndex += 1) {
       const angle = rotation
-        + nodeIndex * (Math.PI * 2 / CONFIG.network.nodesPerCluster)
-      const radialStretch = nodeIndex === 2 ? stretch : 1
+        + nodeIndex * (Math.PI * 2 / nodeCount)
+        + MathUtils.lerp(-0.28, 0.28, random())
+      const radialDistance = radius * MathUtils.lerp(0.68, 1.25, random())
       const node = [
-        centerX + Math.cos(angle) * radius * radialStretch,
-        centerY + Math.sin(angle) * radius * radialStretch,
-        centerZ + Math.sin(angle + 0.8) * radius * 0.55,
+        centerX + Math.cos(angle) * radialDistance * stretch,
+        centerY + Math.sin(angle) * radialDistance,
+        centerZ + Math.sin(angle + 0.8) * radialDistance * 0.82,
       ]
       clusterNodes.push(node)
       addNode(
         node,
-        (verticalProgress + nodeIndex * 0.19) % 1,
+        (clusterIndex / CONFIG.network.clusterCount + nodeIndex * 0.19) % 1,
         0.34 + Math.pow(random(), 1.45) * 1.52,
         drift,
       )
     }
 
-    addDottedConnection(clusterNodes[0], clusterNodes[1], random(), drift)
-    addDottedConnection(clusterNodes[1], clusterNodes[2], random(), drift)
+    // A tree keeps every small constellation internally legible while the
+    // absence of cross-cluster edges preserves the disconnected topology.
+    for (let nodeIndex = 1; nodeIndex < clusterNodes.length; nodeIndex += 1) {
+      const parentIndex = nodeIndex === 1
+        ? 0
+        : Math.floor(random() * nodeIndex)
+      addDottedConnection(
+        clusterNodes[parentIndex],
+        clusterNodes[nodeIndex],
+        random(),
+        drift,
+      )
+    }
   }
 
   return {
@@ -215,6 +257,8 @@ export function createNetworkData() {
     connectorPositions: new Float32Array(connectorValues),
     connectorShadeFactors: new Float32Array(connectorShadeFactors),
     connectorSizeFactors: new Float32Array(connectorSizeFactors),
+    connectionCount,
+    constellationCount: CONFIG.network.clusterCount,
     nodeDepthFactors: new Float32Array(nodes.map((node) => getDepthFactor(node[2]))),
     nodeDriftAmplitudes: new Float32Array(nodeDriftAmplitudes),
     nodeDriftPhases: new Float32Array(nodeDriftPhases),
@@ -222,11 +266,18 @@ export function createNetworkData() {
     nodePhases: new Float32Array(nodePhases),
     nodeShadeFactors: new Float32Array(nodeShadeFactors),
     nodeSizeFactors: new Float32Array(nodeSizeFactors),
+    nodeCount: nodes.length,
     pointPositions: new Float32Array(nodes.flat()),
   }
 }
 
-export function createNetworkUniforms(color, opacity, pointSize, halo) {
+export function createNetworkUniforms(
+  color,
+  opacity,
+  pointSize,
+  halo,
+  pulseStrength = 0,
+) {
   return {
     uColor: { value: new Color(color) },
     uDriftStrength: { value: 1 },
@@ -235,7 +286,7 @@ export function createNetworkUniforms(color, opacity, pointSize, halo) {
     uPixelRatio: { value: 1 },
     uPointSize: { value: pointSize },
     uPulseSpeed: { value: CONFIG.network.pulseSpeed },
-    uPulseStrength: { value: CONFIG.network.pulseStrength },
+    uPulseStrength: { value: pulseStrength },
     uTime: { value: 0 },
   }
 }

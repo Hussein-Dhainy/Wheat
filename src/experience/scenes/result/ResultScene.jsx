@@ -7,6 +7,8 @@ import resultBackdropFragmentShader from './resultBackdropFragment.glsl?raw'
 import resultBackdropVertexShader from './resultBackdropVertex.glsl?raw'
 import ResultBackgroundParticles from './ResultBackgroundParticles.jsx'
 import { RESULT_SCENE_CONFIG as CONFIG } from './resultConfig.js'
+import resultShadowFragmentShader from './resultShadowFragment.glsl?raw'
+import resultShadowVertexShader from './resultShadowVertex.glsl?raw'
 import {
   createDustPositions,
   createInspectionOrbitData,
@@ -58,24 +60,28 @@ export function ResultScene({
       CONFIG.network.connectorOpacity,
       CONFIG.network.connectorSize,
       0,
+      CONFIG.network.connectorPulseStrength,
     ),
     connectorGlow: createNetworkUniforms(
       CONFIG.network.connectorColor,
-      CONFIG.network.glowOpacity,
+      CONFIG.network.connectorGlowOpacity,
       CONFIG.network.connectorGlowSize,
       1,
+      CONFIG.network.connectorPulseStrength,
     ),
     nodeCore: createNetworkUniforms(
       CONFIG.network.pointColor,
       CONFIG.network.nodeOpacity,
       CONFIG.network.nodeSize,
       0,
+      CONFIG.network.nodePulseStrength,
     ),
     nodeGlow: createNetworkUniforms(
       CONFIG.network.pointColor,
-      CONFIG.network.glowOpacity,
+      CONFIG.network.nodeGlowOpacity,
       CONFIG.network.nodeGlowSize,
       1,
+      CONFIG.network.nodePulseStrength,
     ),
   }), [])
   const orbitUniforms = useMemo(() => ({
@@ -99,8 +105,14 @@ export function ResultScene({
     ),
   }), [])
   const backdropUniforms = useMemo(() => ({
-    uOrangeStrength: { value: 1 },
+    uClosingMix: { value: 0 },
     uTime: { value: 0 },
+  }), [])
+  const shadowMeshRef = useRef()
+  const shadowTime = useRef(0)
+  const shadowUniforms = useMemo(() => ({
+    uTime: { value: 0 },
+    uVignetteStrength: { value: 1 },
   }), [])
   const assets = useMemo(() => {
     const geometry = prepareGeometry(
@@ -136,12 +148,33 @@ export function ResultScene({
       0,
       1,
     )
-    const entrance = Math.max(
-      smootherRange(progress, CONFIG.grain.entranceRange),
-      transitionVisibility,
-    )
-    const exit = smootherRange(progress, CONFIG.grain.exitRange)
-    const visibility = entrance
+    // Incoming scenes receive a signed offset from -1 to 0 and outgoing
+    // scenes receive 0 to 1. Because the value comes from virtual scroll,
+    // reversing input retraces this exact movement without special cases.
+    const transitionMotionOffset = reducedMotion
+      ? 0
+      : sceneStateRef.current.transitionMotionOffset ?? 0
+    const wipeRiseOffset = transitionMotionOffset < 0
+      ? transitionMotionOffset * CONFIG.grain.wipeRise
+      : transitionMotionOffset * CONFIG.grain.exitTransitionTravel
+    // Linear, matching the wipe-rise's own linear rate above — using an
+    // eased curve here (smootherRange) made the value line up at the
+    // handoff but not the speed: easing starts at zero velocity, so
+    // scrolling straight through the handoff felt like a little stutter
+    // where the wipe's constant speed suddenly dropped to near-zero.
+    const travelT = transitionMotionOffset < 0
+      ? 0
+      : MathUtils.clamp(
+        (progress - CONFIG.grain.travelProgressRange[0])
+          / (CONFIG.grain.travelProgressRange[1] - CONFIG.grain.travelProgressRange[0]),
+        0,
+        1,
+      )
+    const scrollTravelOffset = MathUtils.lerp(0, CONFIG.grain.travelRange, travelT)
+    const travelOffset = wipeRiseOffset + scrollTravelOffset
+    // `visibility` only tracks the diagonal wipe crossing into/out of this
+    // scene (fade opacity), separate from the travel offset above.
+    const visibility = transitionVisibility
     const orangeFade = smootherRange(
       progress,
       CONFIG.atmosphere.orangeFadeRange,
@@ -173,14 +206,17 @@ export function ResultScene({
     )
     const time = reducedMotion ? 0 : activeTime.current
     backdropMaterialRef.current.uniforms.uTime.value = time
-    backdropMaterialRef.current.uniforms.uOrangeStrength.value = 1 - orangeFade
+    backdropMaterialRef.current.uniforms.uClosingMix.value = smootherRange(
+      progress,
+      CONFIG.atmosphere.closingBackgroundRange,
+    )
 
     grainGroupRef.current.position.set(
-      position[0] + MathUtils.lerp(0.45, 0, entrance),
-      position[1] + MathUtils.lerp(-0.25, 0, entrance) + exit * 5.5,
+      position[0],
+      position[1] + travelOffset,
       position[2],
     )
-    grainGroupRef.current.scale.setScalar(scale * MathUtils.lerp(0.72, 1, entrance))
+    grainGroupRef.current.scale.setScalar(scale)
     const interaction = resultInteractionRef?.current
     const targetInspectionRotation = resultInspectionOpen
       ? interaction?.rotationTarget ?? 0
@@ -262,23 +298,30 @@ export function ResultScene({
     networkMaterials.forEach((material) => {
       material.uniforms.uTime.value = time
       material.uniforms.uPixelRatio.value = viewport.dpr
-      material.uniforms.uPulseStrength.value = reducedMotion
-        ? 0
-        : CONFIG.network.pulseStrength
       material.uniforms.uDriftStrength.value = reducedMotion ? 0 : 1
     })
+    const connectorPulseStrength = reducedMotion
+      ? 0
+      : CONFIG.network.connectorPulseStrength
+    connectorCoreMaterialRef.current.uniforms.uPulseStrength.value = connectorPulseStrength
+    connectorGlowMaterialRef.current.uniforms.uPulseStrength.value = connectorPulseStrength
+    const nodePulseStrength = reducedMotion
+      ? 0
+      : CONFIG.network.nodePulseStrength
+    nodeCoreMaterialRef.current.uniforms.uPulseStrength.value = nodePulseStrength
+    nodeGlowMaterialRef.current.uniforms.uPulseStrength.value = nodePulseStrength
     connectorCoreMaterialRef.current.uniforms.uOpacity.value = visibility
       * networkInspectionVisibility
       * CONFIG.network.connectorOpacity
     connectorGlowMaterialRef.current.uniforms.uOpacity.value = visibility
       * networkInspectionVisibility
-      * CONFIG.network.glowOpacity
+      * CONFIG.network.connectorGlowOpacity
     nodeCoreMaterialRef.current.uniforms.uOpacity.value = visibility
       * networkInspectionVisibility
       * CONFIG.network.nodeOpacity
     nodeGlowMaterialRef.current.uniforms.uOpacity.value = visibility
       * networkInspectionVisibility
-      * CONFIG.network.glowOpacity
+      * CONFIG.network.nodeGlowOpacity
 
     inspectionOrbitRef.current.position.copy(grainGroupRef.current.position)
     inspectionOrbitRef.current.position.x += CONFIG.inspection.orbit.position[0]
@@ -346,6 +389,19 @@ export function ResultScene({
       CONFIG.camera.lookAt[1] + cameraOffset.current.y * 0.3,
       CONFIG.camera.lookAt[2],
     )
+
+    // Screen-space shadow overlay: kept glued a fixed distance in front of
+    // the camera every frame, same technique as the field scene's shadow
+    // overlay. Strength tracks the scene's own transition visibility so it
+    // fades in/out with the diagonal wipe instead of popping.
+    if (shadowMeshRef.current) {
+      shadowMeshRef.current.position.copy(camera.position)
+      shadowMeshRef.current.quaternion.copy(camera.quaternion)
+      shadowMeshRef.current.translateZ(-1)
+    }
+    if (!reducedMotion) shadowTime.current += delta
+    shadowUniforms.uTime.value = shadowTime.current
+    shadowUniforms.uVignetteStrength.value = visibility
   })
 
   return (
@@ -385,14 +441,30 @@ export function ResultScene({
       </points>
 
       <ResultBackgroundParticles
+        pointerRef={pointerRef}
         reducedMotion={reducedMotion}
         sceneStateRef={sceneStateRef}
       />
 
-      <hemisphereLight args={['#d6d99b', '#00382e', 0.38]} />
-      <directionalLight color="#ffe08a" intensity={3.25} position={[4.6, 3.8, 5]} />
-      <directionalLight color="#89d4bd" intensity={2.15} position={[-4, -1, 2]} />
-      <pointLight color="#e27a43" intensity={0.7} position={[1.8, 3, 2.5]} />
+      <mesh ref={shadowMeshRef} frustumCulled={false} renderOrder={10}>
+        <planeGeometry args={[10, 10]} />
+        <shaderMaterial
+          depthTest={false}
+          depthWrite={false}
+          fragmentShader={resultShadowFragmentShader}
+          transparent
+          uniforms={shadowUniforms}
+          vertexShader={resultShadowVertexShader}
+        />
+      </mesh>
+
+      {/* A warm studio key shapes the grain while pale blue and orange lights
+          sit far behind either side. Their shallow side angles keep the color
+          on the grazing silhouettes instead of washing across the front. */}
+      <hemisphereLight args={['#f2e2a8', '#052a20', 0.68]} />
+      <directionalLight color="#ffd897" intensity={1.05} position={[4.2, 3.4, -4]} />
+      <directionalLight color="#b0dced" intensity={1.6} position={[-3, 0.2, -4]} />
+      <directionalLight color="#efc499" intensity={1.6} position={[4.5, -0.2, -2]} />
 
       <group ref={grainGroupRef}>
         <mesh

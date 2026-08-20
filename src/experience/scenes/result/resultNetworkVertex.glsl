@@ -28,7 +28,10 @@ void main() {
   float pulseWave = 0.5 + 0.5 * sin(
     aPulsePhase * 6.28318530718 - uTime * uPulseSpeed * 6.28318530718
   );
-  float travelingPulse = 0.58 + pow(pulseWave, 9.0) * 1.6;
+  // A broad moving opacity wave creates alternating light and dark runs of
+  // dots along each connection. Per-connection phase offsets keep separate
+  // constellations from pulsing in lockstep.
+  float travelingPulse = mix(0.35, 1.0, pulseWave);
   vPulse = mix(1.0, travelingPulse, uPulseStrength);
   vDepthFactor = aDepthFactor;
   vShade = aShade;

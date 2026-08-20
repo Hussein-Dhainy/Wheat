@@ -28,7 +28,9 @@ export const GENETICS_SEED_OPTIONS = [
 export const DEFAULT_GENETICS_SEED_ID = 'closed'
 
 // Shared by the WebGL reveal and its HTML controls so neither layer becomes
-// interactive before the other is visible.
+// interactive before the other is visible. The reveal now finishes exactly
+// at the scene's own end (1) instead of leaving dead scroll room between a
+// fully revealed carousel and the transition into Scene 3.
 export const GENETICS_SEED_TIMING = {
-  carouselRevealRange: [0.8, 0.9],
+  carouselRevealRange: [0.8, 1],
 }

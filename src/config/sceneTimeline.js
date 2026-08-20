@@ -11,6 +11,7 @@ export const SCENE_TIMELINE_CONFIG = [
     timeline: {
       leadingHoldLength: 0.75,
       sections: [],
+      transitionMotion: { entryDistance: 0.2, exitDistance: 0.2 },
       exitTransitionLength: 1,
     },
   },
@@ -39,6 +40,7 @@ export const SCENE_TIMELINE_CONFIG = [
           scrollLength: 4,
         },
       ],
+      transitionMotion: { entryDistance: 0.2, exitDistance: 0.2 },
       exitTransitionLength: 1,
     },
   },
@@ -54,6 +56,7 @@ export const SCENE_TIMELINE_CONFIG = [
           scrollLength: 3,
         },
       ],
+      transitionMotion: { entryDistance: 0.2, exitDistance: 0.2 },
       exitTransitionLength: 1,
     },
   },
@@ -66,9 +69,10 @@ export const SCENE_TIMELINE_CONFIG = [
           description: 'Expanded field trials compare candidates across many plots.',
           id: 'aerial-field',
           label: 'Testing, testing and more testing',
-          scrollLength: 2,
+          scrollLength: 1,
         },
       ],
+      transitionMotion: { entryDistance: 0.2, exitDistance: 0.2 },
       exitTransitionLength: 1,
     },
   },
@@ -76,14 +80,19 @@ export const SCENE_TIMELINE_CONFIG = [
     id: 'result',
     timeline: {
       freeScroll: true,
+      // Consumes a small over-crossing when scrolling up right at the
+      // start of this scene, instead of immediately releasing back into
+      // Scene 4 — the same buffer genetics uses at its own start.
+      reverseEntryResistance: 0.03,
       sections: [
         {
           description: 'The final grain and closing actions complete the wheat journey.',
           id: 'result-journey',
           label: 'One grain makes it through',
-          scrollLength: 2,
+          scrollLength: 1,
         },
       ],
+      transitionMotion: { entryDistance: 0.2, exitDistance: 0.2 },
       exitTransitionLength: 1,
     },
   },

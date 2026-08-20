@@ -12,6 +12,9 @@ export const PREDICTION_RENDER_CONFIG = {
     // instead of exposing its modeled endpoint at the end of Scene 3.
     endY: 1.05,
     minimumY: 0.95,
+    // Scene 3 keeps tracking down the plants while its diagonal exit reveals
+    // Scene 4. This lower floor is reached only during that outgoing wipe.
+    exitMinimumY: 0.45,
     z: 1.8,
     lookAtX: 0,
     lookAtZ: 0,

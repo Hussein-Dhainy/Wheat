@@ -74,6 +74,7 @@ export default function DNAHelix({
   const entryElapsed = useRef(0)
   const entryParticleFlow = useRef(0)
   const entryHasStarted = useRef(false)
+  const entryIsSettled = useRef(false)
   const reverseExitActive = useRef(false)
   const scrollRotationProgress = useRef(0)
   const idleRotation = useRef(0)
@@ -229,6 +230,7 @@ export default function DNAHelix({
       entryElapsed.current = 0
       entryParticleFlow.current = 0
       entryHasStarted.current = false
+      entryIsSettled.current = false
       reverseExitActive.current = false
       scrollRotationProgress.current = 0
       if (haloMaterialReference.current) {
@@ -249,6 +251,12 @@ export default function DNAHelix({
     // Normalized so 1.0 lands exactly 2 scroll units into the scene's
     // single 3-unit-long section, instead of at the section's own end.
     const sceneProgress = sceneState.progress ?? 0
+    const motionProgress = reducedMotion
+      ? sceneProgress
+      : sceneState.motionProgress ?? sceneProgress
+    const transitionMotionOffset = reducedMotion
+      ? 0
+      : sceneState.transitionMotionOffset ?? 0
     const sceneVisibility = Math.min(
       1,
       Math.max(0, sceneState.visibility ?? 0),
@@ -267,6 +275,7 @@ export default function DNAHelix({
     } else if (!entryIsVisible) {
       entryElapsed.current = 0
       entryHasStarted.current = false
+      entryIsSettled.current = false
       reverseExitActive.current = false
     } else if (!entryHasStarted.current) {
       // Scene 2 can become active at either boundary. Only entering from
@@ -278,11 +287,19 @@ export default function DNAHelix({
         && sceneState.isEntering
         && sceneProgress > 0.5
       )
-      entryElapsed.current = isEnteringFromSceneEnd ? entryDuration : 0
+      entryElapsed.current = isEnteringFromSceneEnd
+        ? entryDuration
+        : sceneVisibility * entryDuration
       entryHasStarted.current = true
+      entryIsSettled.current = isEnteringFromSceneEnd
       reverseExitActive.current = false
-    } else {
-      entryElapsed.current += deltaTime
+    } else if (!entryIsSettled.current) {
+      // Tracks the diagonal transition's own visibility directly instead of
+      // a fixed real-time clock, so the reveal and rotation-settle below
+      // track actual scroll progress with zero added lag — visible and
+      // rotating from the very first frame of the transition, not after a
+      // separate fade-in timer catches up.
+      entryElapsed.current = sceneVisibility * entryDuration
       reverseExitActive.current = false
     }
 
@@ -320,7 +337,7 @@ export default function DNAHelix({
     // between scrolling and the DNA visibly responding.
     scrollRotationProgress.current = reducedMotion
       ? 0
-      : sceneProgress * entrySettleProgress
+      : motionProgress * entrySettleProgress
     applyBackgroundPalette(
       backgroundReference.current,
       backgroundStops,
@@ -350,6 +367,7 @@ export default function DNAHelix({
 
     dnaReference.current.position.y = (
       disappearProgress * DNA_VERTICAL_TRAVEL
+      + transitionMotionOffset * DNA_RENDER_CONFIG.transitionTravel
     )
     dnaReference.current.rotation.y = reducedMotion
       ? 0

@@ -251,7 +251,34 @@ test('one reverse wheel event settles from the Scene 3 anchor to Scene 2', () =>
   assert.equal(state.snapPending, false)
 })
 
-test('one reverse wheel event returns from visible Scene 3 to Scene 2', () => {
+test('a small reverse nudge after settling on Scene 3 still reaches Scene 2\'s end', () => {
+  // `current` eases toward `target` every frame, so pausing right after a
+  // settle and then reversing lets `current` drift a hair past the boundary
+  // into Scene 2's exit transition before the idle timer fires. That used to
+  // make free-scroll target resolution bail out (it only recognised the
+  // settled scene's own 'section' phase) and fall back to nearest-snap,
+  // which just reabsorbed the nudge back into Scene 3's start.
+  const sceneTwo = SCENE_TIMELINE.scenes[1]
+  const sceneThree = SCENE_TIMELINE.scenes[2]
+  const state = createStateAt(sceneThree.start)
+
+  addVirtualScrollDelta(state, -0.01)
+  for (let frame = 0; frame < 9; frame += 1) {
+    advanceVirtualScroll(state, 1 / 60)
+  }
+
+  assert.ok(state.current < sceneThree.start)
+  assert.equal(state.target, sceneTwo.transitionStart)
+})
+
+test('one reverse wheel event moves incrementally from visible Scene 3 back toward Scene 2', () => {
+  // Direct scroll input while mid-transition used to force-commit straight
+  // to that transition's boundary regardless of how far the input actually
+  // reversed — which meant a single wheel tick against a snap already in
+  // flight could yank the view all the way back, fighting anyone who meant
+  // to keep scrolling. It now just moves by the input's own amount, same as
+  // scrolling anywhere else; a pause afterward is what decides where it
+  // finally settles (see the idle-snap tests above).
   const sceneTwo = SCENE_TIMELINE.scenes[1]
   const visibleSceneThreePosition = sceneTwo.transitionStart
     + sceneTwo.exitTransitionLength * 0.6
@@ -259,20 +286,25 @@ test('one reverse wheel event returns from visible Scene 3 to Scene 2', () => {
 
   addVirtualScrollDelta(state, -0.56)
 
-  assert.equal(state.target, sceneTwo.transitionStart)
-  assert.equal(state.isSnapping, true)
-  assert.equal(state.snapPending, false)
+  assert.equal(state.target, visibleSceneThreePosition - 0.56)
+  assert.equal(state.isSnapping, false)
+  assert.equal(state.snapPending, true)
 })
 
-test('reversing an in-progress Scene 2 to 3 transition commits backward', () => {
+test('reversing an in-progress Scene 2 to 3 transition moves incrementally instead of committing', () => {
   const sceneTwo = SCENE_TIMELINE.scenes[1]
-  const state = createStateAt(sceneTwo.transitionStart + 0.6)
+  const startPosition = sceneTwo.transitionStart + 0.6
+  const state = createStateAt(startPosition)
   state.target = sceneTwo.end
   state.isSnapping = true
 
   addVirtualScrollDelta(state, -0.56)
 
-  assert.equal(state.target, sceneTwo.transitionStart)
-  assert.equal(state.isSnapping, true)
-  assert.equal(state.snapPending, false)
+  // Direct input cancels the in-flight forward snap (isSnapping resets and
+  // its target snaps back to the current position) before the reversal's
+  // own delta is applied, so the two starting scenarios above land on the
+  // same result regardless of whether a snap was already in flight.
+  assert.equal(state.target, startPosition - 0.56)
+  assert.equal(state.isSnapping, false)
+  assert.equal(state.snapPending, true)
 })

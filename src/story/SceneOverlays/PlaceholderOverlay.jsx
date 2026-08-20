@@ -2,10 +2,18 @@ import {
   DEFAULT_GENETICS_SEED_ID,
   GENETICS_SEED_OPTIONS,
 } from '../../config/geneticsSeeds.js'
+import { TitleParticleText } from '../components/TitleParticleText/TitleParticleText.jsx'
 import { PredictionIntro } from './PredictionIntro.jsx'
 import { ResultExperience } from './ResultExperience.jsx'
+import {
+  BOLD_TITLE_FONT_SIZE,
+  BOLD_TITLE_FONT_WEIGHT,
+  BOLD_TITLE_LETTER_SPACING,
+  BOLD_TITLE_LINE_HEIGHT,
+  FIELD_TITLE_BOX,
+  FIELD_TITLE_LINE_TEXTS,
+} from './sceneTitleBox.js'
 import styles from './SceneOverlays.module.css'
-import { FIELD_TITLE_LINES, SceneTitleLines } from './SceneTitleLines.jsx'
 
 export function PlaceholderOverlay({
   entry,
@@ -69,11 +77,21 @@ export function PlaceholderOverlay({
                 ? `Prototype section ${sectionIndex + 1} / ${sectionCount}`
                 : 'Prototype scene'}
             </p>
-            <h2 id={titleId} className={styles.visuallyHidden}>{label}</h2>
-            <SceneTitleLines
+            <TitleParticleText
+              as="h2"
+              baseline={FIELD_TITLE_BOX.baseline}
               className={styles.fieldTitleLines}
-              lines={FIELD_TITLE_LINES}
+              fontSize={BOLD_TITLE_FONT_SIZE}
+              fontWeight={BOLD_TITLE_FONT_WEIGHT}
+              headingId={titleId}
+              letterSpacing={BOLD_TITLE_LETTER_SPACING}
+              lineHeight={BOLD_TITLE_LINE_HEIGHT}
+              lines={FIELD_TITLE_LINE_TEXTS}
+              text={label}
+              textAlign="left"
               textColor="#f5f1e7"
+              viewBoxHeight={FIELD_TITLE_BOX.viewBoxHeight}
+              viewBoxWidth={FIELD_TITLE_BOX.viewBoxWidth}
             />
             <p>{description}</p>
           </div>

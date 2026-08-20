@@ -155,7 +155,11 @@ export default function DNAHelixNodes({ reducedMotion, sceneStateRef }) {
       || !sceneStateRef?.current?.isActive
     ) return
 
-    const progress = Math.min(1, Math.max(0, sceneStateRef.current.progress ?? 0))
+    const progress = reducedMotion
+      ? Math.min(1, Math.max(0, sceneStateRef.current.progress ?? 0))
+      : sceneStateRef.current.motionProgress
+        ?? sceneStateRef.current.progress
+        ?? 0
     activeTime.current = advanceActiveSceneTime(
       activeTime.current,
       deltaTime,

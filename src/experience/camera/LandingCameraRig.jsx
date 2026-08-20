@@ -30,11 +30,18 @@ export function LandingCameraRig({
     const pitch = pointer.ndcY * LANDING_CAMERA.verticalOrbit * motionScale
     const pitchRadius = Math.cos(pitch) * radius
     const leadingHoldProgress = sceneStateRef?.current.leadingHoldProgress ?? 1
+    const transitionMotionOffset = reducedMotion
+      ? 0
+      : sceneStateRef?.current.transitionMotionOffset ?? 0
     const leadingHoldOffset = (
       1 - MathUtils.smootherstep(leadingHoldProgress, 0, 1)
     ) * LANDING_INTRO.leadingHoldCameraOffsetY
+    const transitionOffsetY = -transitionMotionOffset
+      * LANDING_INTRO.transitionMotionOffsetY
     const targetX = Math.sin(yaw) * pitchRadius
-    const targetY = Math.sin(pitch) * radius + leadingHoldOffset
+    const targetY = Math.sin(pitch) * radius
+      + leadingHoldOffset
+      + transitionOffsetY
     const targetZ = Math.cos(yaw) * pitchRadius
 
     camera.position.x = reducedMotion
@@ -61,7 +68,7 @@ export function LandingCameraRig({
           LANDING_INTRO.cameraTransitionSpeed,
           delta,
         )
-    CAMERA_TARGET.y = leadingHoldOffset
+    CAMERA_TARGET.y = leadingHoldOffset + transitionOffsetY
     camera.lookAt(CAMERA_TARGET)
   })
 

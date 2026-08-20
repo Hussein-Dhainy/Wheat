@@ -54,6 +54,10 @@ const WHEAT_TRANSFORM = {
   rotationTransitionSpeed: 3,
   idlePositionAmount: 0.055,
   idleRotationAmount: 0.025,
+  // Additional world-space rise while Scene 1 is wiped into Scene 2.
+  transitionTravelY: 1.1,
+  // Y-axis turn driven by signed scroll progress during the Scene 1 wipe.
+  transitionRotationY: 0.75,
 }
 
 function LandingLights() {
@@ -154,6 +158,9 @@ function WheatPlant({ reducedMotion, sceneStateRef }) {
       ? WHEAT_TRANSFORM.compactPosition
       : WHEAT_TRANSFORM.desktopPosition
     const idle = reducedMotion ? 0 : Math.sin(activeTime.current * 0.55)
+    const transitionMotionOffset = reducedMotion
+      ? 0
+      : sceneStateRef?.current.transitionMotionOffset ?? 0
 
     wheat.current.position.x = MathUtils.damp(
       wheat.current.position.x,
@@ -164,7 +171,8 @@ function WheatPlant({ reducedMotion, sceneStateRef }) {
     wheat.current.position.y = MathUtils.damp(
       wheat.current.position.y,
       basePosition[1]
-        + idle * WHEAT_TRANSFORM.idlePositionAmount,
+        + idle * WHEAT_TRANSFORM.idlePositionAmount
+        + transitionMotionOffset * WHEAT_TRANSFORM.transitionTravelY,
       WHEAT_TRANSFORM.positionTransitionSpeed,
       delta,
     )
@@ -177,7 +185,8 @@ function WheatPlant({ reducedMotion, sceneStateRef }) {
     )
     wheat.current.rotation.y = MathUtils.damp(
       wheat.current.rotation.y,
-      WHEAT_TRANSFORM.rotation[1],
+      WHEAT_TRANSFORM.rotation[1]
+        + transitionMotionOffset * WHEAT_TRANSFORM.transitionRotationY,
       WHEAT_TRANSFORM.rotationTransitionSpeed,
       delta,
     )

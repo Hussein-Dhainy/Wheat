@@ -5,10 +5,10 @@ import { SCENE_TIMELINE } from '../src/config/sceneTimeline.js'
 import { FIELD_TRIALS_CONFIG } from '../src/experience/scenes/field/fieldTrialsConfig.js'
 import { createFieldTintData } from '../src/experience/scenes/field/fieldTintLayout.js'
 
-test('Scene 4 provides two virtual units of continuous field travel', () => {
+test('Scene 4 provides one virtual unit of continuous field travel', () => {
   const fieldScene = SCENE_TIMELINE.scenes.find((scene) => scene.id === 'field')
 
-  assert.equal(fieldScene.contentLength, 2)
+  assert.equal(fieldScene.contentLength, 1)
   assert.equal(fieldScene.freeScroll, true)
   assert.equal(fieldScene.sections[0].id, 'aerial-field')
 })
@@ -41,4 +41,19 @@ test('the field uses enough geometry overscan to hide the plane boundary', () =>
   assert.ok(FIELD_TRIALS_CONFIG.planeSize >= 40)
   assert.ok(FIELD_TRIALS_CONFIG.gridSize[0] >= 16)
   assert.ok(FIELD_TRIALS_CONFIG.gridSize[1] >= 16)
+})
+
+test('Scene 4 keeps its bottom screen shadow independently configurable', () => {
+  const shadow = FIELD_TRIALS_CONFIG.screenShadow
+
+  assert.ok(shadow.bottomOpacity > 0)
+  assert.ok(shadow.bottomOpacity < 1)
+  assert.ok(shadow.cloudOpacity > 0)
+  assert.ok(shadow.cloudOpacity < 1)
+  assert.ok(shadow.driftAmount > 0)
+  assert.ok(shadow.driftSpeed > 0)
+  assert.ok(shadow.fadeStart < shadow.fadeEnd)
+  assert.equal(shadow.clearSceneProgress, 0.5)
+  assert.ok(shadow.transitionProgressShare > 0)
+  assert.ok(shadow.transitionProgressShare < 1)
 })

@@ -250,6 +250,10 @@ export default function DNAFallingSeeds({
       0,
       1,
     )
+    const transitionTravel = reducedMotion
+      ? 0
+      : (sceneStateRef.current.transitionMotionOffset ?? 0)
+        * CONFIG.transitionTravel
     activeTime.current = advanceActiveSceneTime(
       activeTime.current,
       deltaTime,
@@ -261,10 +265,11 @@ export default function DNAFallingSeeds({
       CONFIG.streamScrollRange,
     )
     const scrollTravel = streamProgress * CONFIG.streamTravel
-    fallingReference.current.position.y = scrollTravel
+    fallingReference.current.position.y = scrollTravel + transitionTravel
     carouselReference.current.position.y = CONFIG.carousel.center[1]
       - CONFIG.streamTravel
       + scrollTravel
+      + transitionTravel
 
     tracks.forEach((track, index) => {
       scratchObject.position.set(

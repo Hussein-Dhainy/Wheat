@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef } from 'react'
 import styles from './TitleParticleText.module.css'
 
 // Every radius/distance below was tuned by eye against a 127px title (the
@@ -13,11 +13,23 @@ const BASE_CLIP_MARGIN = 18
 const BASE_INNER_RADIUS = 29
 const BASE_INNER_CAPTURE_MARGIN = 11
 const BASE_RING_SWITCH_HYSTERESIS = 7
+// Each particle rests at its ring's radius plus its own fixed offset in
+// this +/- range, so the ring reads as a scattered band instead of every
+// particle lining up on the exact same circle.
+const BASE_RADIAL_JITTER = 9
 const BASE_LINK_SOURCE_DISTANCE = 54
 const BASE_LINK_SNAP_DISTANCE = 96
 const BASE_LINK_RELEASE_DISTANCE = 108
 const MAX_PARTICLES = 410
 const MAX_LINKS = 320
+
+// Exponential-decay time constants approximating the old CSS transition
+// durations (420ms position ease, 120-160ms opacity fade) without needing a
+// real CSS transition — see the canvas draw loop below.
+const POSITION_EASE_TAU = 0.1
+const OPACITY_EASE_TAU = 0.045
+const SETTLE_OPACITY_EPSILON = 0.003
+const MAX_FRAME_DELTA_SECONDS = 0.1
 
 function computeEffectConfig({
   baseline,
@@ -52,6 +64,7 @@ function computeEffectConfig({
     linkSourceDistance: BASE_LINK_SOURCE_DISTANCE * scale,
     outerRadius,
     parkedPointer: -clipRadius - activationRadius,
+    radialJitter: BASE_RADIAL_JITTER * scale,
     ringSwitchHysteresis: BASE_RING_SWITCH_HYSTERESIS * scale,
     text,
     viewBoxHeight,
@@ -123,7 +136,6 @@ function createLinks(particles, config) {
     linkedIndices.add(closestIndex)
     links.push({
       endIndex: closestIndex,
-      key: `${startIndex}-${closestIndex}`,
       startIndex,
     })
   }
@@ -131,7 +143,7 @@ function createLinks(particles, config) {
   return links
 }
 
-function sampleParticleData(config, seed) {
+function sampleParticleData(config, seed, lines, lineHeight, textAlign) {
   const canvas = document.createElement('canvas')
   const context = canvas.getContext('2d', { willReadFrequently: true })
   const random = createSeededRandom(seed)
@@ -144,7 +156,11 @@ function sampleParticleData(config, seed) {
   context.clearRect(0, 0, canvas.width, canvas.height)
   context.fillStyle = '#fff'
   configureContext(context, config)
-  context.fillText(config.text, config.viewBoxWidth / 2, config.baseline)
+  context.textAlign = textAlign
+  const textX = textAlign === 'left' ? 0 : config.viewBoxWidth / 2
+  lines.forEach((line, index) => {
+    context.fillText(line, textX, config.baseline + index * lineHeight)
+  })
 
   const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data
 
@@ -154,11 +170,11 @@ function sampleParticleData(config, seed) {
   // instance samples the same coarse grid over a proportionally smaller
   // letterform, leaving visibly sparser, patchier coverage.
   const sampleScale = config.fontSize / EFFECT_TUNING_FONT_SIZE
-  const step = Math.max(3, Math.round(7 * sampleScale))
+  const gridStep = Math.max(3, Math.round(7 * sampleScale))
   const jitter = 5 * sampleScale
 
-  for (let y = 6; y < canvas.height - 6; y += step) {
-    for (let x = 6; x < canvas.width - 6; x += step) {
+  for (let y = 6; y < canvas.height - 6; y += gridStep) {
+    for (let x = 6; x < canvas.width - 6; x += gridStep) {
       const sampleX = Math.min(canvas.width - 1, Math.round(x + (random() - 0.5) * jitter))
       const sampleY = Math.min(canvas.height - 1, Math.round(y + (random() - 0.5) * jitter))
       const alpha = pixels[(sampleY * canvas.width + sampleX) * 4 + 3]
@@ -172,11 +188,13 @@ function sampleParticleData(config, seed) {
           y: sampleY,
           radius: 0.8 + Math.pow(sizeVariation, 1.45) * 3.8,
           color: `rgb(${shade} ${shade} ${shade})`,
+          linked: false,
           phase: random() * Math.PI * 2,
+          radialJitter: (random() - 0.5) * 2 * config.radialJitter,
           driftX: (random() - 0.5) * 18,
           driftY: (random() - 0.5) * 18,
-          driftDuration: 2.2 + random() * 2.4,
-          driftDelay: -random() * 4.6,
+          driftFrequency: 1 / (2.2 + random() * 2.4),
+          driftPhaseOffset: random() * -4.6,
         })
       }
     }
@@ -197,7 +215,18 @@ function sampleParticleData(config, seed) {
   }
 }
 
-export function TitleParticleText({
+function lerpTowards(current, target, dt, tau) {
+  if (dt <= 0) return current
+  const decay = 1 - Math.exp(-dt / tau)
+  return current + (target - current) * decay
+}
+
+function getReducedMotionQuery() {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return null
+  return window.matchMedia('(prefers-reduced-motion: reduce)')
+}
+
+export const TitleParticleText = forwardRef(function TitleParticleText({
   as: HeadingTag = 'h2',
   baseline,
   className = '',
@@ -205,14 +234,27 @@ export function TitleParticleText({
   fontSize,
   fontWeight = 400,
   headingId,
+  // When false, this instance doesn't attach its own pointer listeners —
+  // a parent that wants a larger hover area (e.g. reacting to the whole
+  // section, not just the tight title bounds) drives it instead via the
+  // imperative handle (applyPointerPosition/park/element) exposed below.
+  interactive = true,
   letterSpacing = -2,
+  // Multi-line mode: pass `lines` (the strings actually drawn/sampled,
+  // e.g. already-uppercased display text) alongside `text` (the full
+  // sentence used only for the accessible heading). Single-line callers
+  // just pass `text` and lines defaults to that one line, unchanged from
+  // before.
+  lineHeight,
+  lines,
   seed = 6197,
   style,
   text,
+  textAlign = 'center',
   textColor = '#f5f1e7',
   viewBoxHeight,
   viewBoxWidth,
-}) {
+}, forwardedRef) {
   const config = computeEffectConfig({
     baseline,
     fontFamily,
@@ -223,151 +265,251 @@ export function TitleParticleText({
     viewBoxHeight,
     viewBoxWidth,
   })
+  const displayLines = useMemo(() => lines ?? [text], [lines, text])
+  const resolvedLineHeight = lineHeight ?? fontSize
 
   const uid = useId()
   const wrapper = useRef()
   const reveal = useRef()
-  const particleClip = useRef()
-  const particleElements = useRef([])
-  const particleLinkElements = useRef([])
-  const particleTargets = useRef([])
-  const pendingPointer = useRef(null)
-  const pointerFrame = useRef(null)
-  const [links, setLinks] = useState([])
-  const [particles, setParticles] = useState([])
+  const canvas = useRef()
+  const particlesData = useRef([])
+  const linksData = useRef([])
+  const renderState = useRef([])
+  const linkOpacity = useRef([])
+  const pointer = useRef({ x: config.parkedPointer, y: config.parkedPointer })
+  const rafId = useRef(null)
+  const lastFrameTime = useRef(0)
+  const reducedMotion = useRef(false)
 
+  // Sampling (drawing the text to an offscreen canvas and reading alpha to
+  // seed particle positions) only needs to happen once per text/font change —
+  // it isn't part of the per-frame cost this component cares about.
   useEffect(() => {
     let cancelled = false
 
     ensureFontLoaded(config).then(() => {
       if (cancelled) return
 
-      const sampled = sampleParticleData(config, seed)
-      particleTargets.current = sampled.particles.map((particle) => ({
+      const sampled = sampleParticleData(config, seed, displayLines, resolvedLineHeight, textAlign)
+      particlesData.current = sampled.particles
+      linksData.current = sampled.links
+      renderState.current = sampled.particles.map((particle) => ({
+        opacity: 0,
         ring: null,
-        visible: false,
         x: particle.x,
         y: particle.y,
       }))
-      setLinks(sampled.links)
-      setParticles(sampled.particles)
+      linkOpacity.current = sampled.links.map(() => 0)
+      drawFrame(0)
     })
 
     return () => {
       cancelled = true
-      if (pointerFrame.current) cancelAnimationFrame(pointerFrame.current)
+      if (rafId.current) cancelAnimationFrame(rafId.current)
     }
-  }, [
-    baseline,
-    fontFamily,
-    fontSize,
-    fontWeight,
-    letterSpacing,
-    seed,
-    text,
-    viewBoxHeight,
-    viewBoxWidth,
-  ])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseline, displayLines, fontFamily, fontSize, fontWeight, letterSpacing, resolvedLineHeight, seed, text, textAlign, viewBoxHeight, viewBoxWidth])
 
-  const positionParticles = (centerX, centerY) => {
-    particles.forEach((particle, index) => {
-      const element = particleElements.current[index]
-      const target = particleTargets.current[index]
-      if (!element || !target) return
+  useEffect(() => {
+    const query = getReducedMotionQuery()
+    if (!query) return undefined
 
+    const updatePreference = () => {
+      reducedMotion.current = query.matches
+    }
+
+    updatePreference()
+    query.addEventListener('change', updatePreference)
+    return () => query.removeEventListener('change', updatePreference)
+  }, [])
+
+  // Resizes the canvas backing store to the element's actual on-screen
+  // pixels (capped, in line with the WebGL canvas's own dpr cap) so drawing
+  // stays crisp without paying for resolution nobody can see.
+  useEffect(() => {
+    const canvasElement = canvas.current
+    if (!canvasElement) return undefined
+
+    const applySize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+      canvasElement.width = Math.max(1, Math.round(viewBoxWidth * dpr))
+      canvasElement.height = Math.max(1, Math.round(viewBoxHeight * dpr))
+      const context = canvasElement.getContext('2d')
+      context.setTransform(dpr, 0, 0, dpr, 0, 0)
+      drawFrame(0)
+    }
+
+    applySize()
+    window.addEventListener('resize', applySize)
+    return () => window.removeEventListener('resize', applySize)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewBoxWidth, viewBoxHeight])
+
+  function drawFrame(deltaSeconds) {
+    const context = canvas.current?.getContext('2d')
+    if (!context) return true
+
+    const centerX = pointer.current.x
+    const centerY = pointer.current.y
+    const isWithinBounds = centerX >= 0 && centerX <= viewBoxWidth
+      && centerY >= 0 && centerY <= viewBoxHeight
+    const particles = particlesData.current
+    const states = renderState.current
+    let anyVisible = false
+
+    context.clearRect(0, 0, viewBoxWidth, viewBoxHeight)
+    context.save()
+    context.beginPath()
+    context.arc(centerX, centerY, config.clipRadius, 0, Math.PI * 2)
+    context.clip()
+    context.globalCompositeOperation = 'lighter'
+
+    for (let index = 0; index < particles.length; index += 1) {
+      const particle = particles[index]
+      const renderedState = states[index]
       const deltaX = particle.x - centerX
       const deltaY = particle.y - centerY
       const distance = Math.hypot(deltaX, deltaY)
 
-      if (distance >= config.activationRadius) {
-        element.setAttribute('cx', particle.x)
-        element.setAttribute('cy', particle.y)
-        delete element.dataset.ring
-        element.style.opacity = 0
-        target.ring = null
-        target.visible = false
-        target.x = particle.x
-        target.y = particle.y
-        return
-      }
+      let targetX = particle.x
+      let targetY = particle.y
+      let targetOpacity = 0
+      let targetRing = null
 
-      const fallbackAngle = particle.phase
-      const baseAngle = distance > 0.001
-        ? Math.atan2(deltaY, deltaX)
-        : fallbackAngle
-      const angle = baseAngle + Math.sin(particle.phase) * 0.035
-      const outerRadius = config.outerRadius - particle.radius
-      const previousRing = element.dataset.ring
-      const prefersOuterRing = step(config.innerCaptureRadius, distance)
-      let nextRing = prefersOuterRing ? 'outer' : 'inner'
+      if (distance < config.activationRadius) {
+        const fallbackAngle = particle.phase
+        const baseAngle = distance > 0.001 ? Math.atan2(deltaY, deltaX) : fallbackAngle
+        const angle = baseAngle + Math.sin(particle.phase) * 0.035
+        const outerRadius = config.outerRadius - particle.radius
+        const prefersOuterRing = step(config.innerCaptureRadius, distance)
+        targetRing = prefersOuterRing ? 'outer' : 'inner'
 
-      if (previousRing === 'inner' && distance < config.innerCaptureRadius + config.ringSwitchHysteresis) {
-        nextRing = 'inner'
-      } else if (previousRing === 'outer' && distance > config.innerCaptureRadius - config.ringSwitchHysteresis) {
-        nextRing = 'outer'
-      }
-
-      element.dataset.ring = nextRing
-      const targetRadius = nextRing === 'inner' ? config.innerRadius : outerRadius
-      const targetX = centerX + Math.cos(angle) * targetRadius
-      const targetY = centerY + Math.sin(angle) * targetRadius
-      const overlap = 1 - distance / config.activationRadius
-
-      element.setAttribute('cx', targetX)
-      element.setAttribute('cy', targetY)
-      element.style.opacity = Math.min(1, 0.3 + overlap * 1.45)
-      target.ring = nextRing
-      target.visible = true
-      target.x = targetX
-      target.y = targetY
-    })
-
-    links.forEach((link, index) => {
-      const element = particleLinkElements.current[index]
-      const start = particleTargets.current[link.startIndex]
-      const end = particleTargets.current[link.endIndex]
-
-      if (!element || !start?.visible || !end?.visible) {
-        if (element) {
-          element.dataset.linked = 'false'
-          element.style.opacity = 0
+        if (renderedState.ring === 'inner' && distance < config.innerCaptureRadius + config.ringSwitchHysteresis) {
+          targetRing = 'inner'
+        } else if (renderedState.ring === 'outer' && distance > config.innerCaptureRadius - config.ringSwitchHysteresis) {
+          targetRing = 'outer'
         }
-        return
+
+        const targetRadius = (targetRing === 'inner' ? config.innerRadius : outerRadius)
+          + particle.radialJitter
+        targetX = centerX + Math.cos(angle) * targetRadius
+        targetY = centerY + Math.sin(angle) * targetRadius
+        const overlap = 1 - distance / config.activationRadius
+        targetOpacity = Math.min(1, 0.3 + overlap * 1.45)
       }
 
-      const linkDistance = Math.hypot(start.x - end.x, start.y - end.y)
-      const wasLinked = element.dataset.linked === 'true'
-      const distanceLimit = wasLinked ? config.linkReleaseDistance : config.linkSnapDistance
+      renderedState.ring = targetRing
+      if (reducedMotion.current) {
+        renderedState.x = targetX
+        renderedState.y = targetY
+      } else {
+        renderedState.x = lerpTowards(renderedState.x, targetX, deltaSeconds, POSITION_EASE_TAU)
+        renderedState.y = lerpTowards(renderedState.y, targetY, deltaSeconds, POSITION_EASE_TAU)
+      }
+      renderedState.opacity = lerpTowards(renderedState.opacity, targetOpacity, deltaSeconds, OPACITY_EASE_TAU)
 
-      if (linkDistance > distanceLimit) {
-        element.dataset.linked = 'false'
-        element.style.opacity = 0
-        return
+      if (renderedState.opacity <= SETTLE_OPACITY_EPSILON) continue
+
+      anyVisible = true
+
+      // Drift only matters for particles that are actually visible right
+      // now, so idle/off-screen particles skip the trig entirely.
+      let drawX = renderedState.x
+      let drawY = renderedState.y
+      if (!particle.linked && !reducedMotion.current) {
+        const driftPhase = (lastFrameTime.current / 1000 + particle.driftPhaseOffset)
+          * particle.driftFrequency * Math.PI * 2 + particle.phase
+        const driftFactor = Math.sin(driftPhase)
+        drawX += particle.driftX * driftFactor
+        drawY += particle.driftY * driftFactor
       }
 
-      element.dataset.linked = 'true'
-      element.setAttribute('x1', start.x)
-      element.setAttribute('y1', start.y)
-      element.setAttribute('x2', end.x)
-      element.setAttribute('y2', end.y)
-      const proximity = 1 - Math.min(linkDistance, config.linkReleaseDistance) / config.linkReleaseDistance
-      element.style.opacity = 0.18 + proximity * 0.38
-    })
+      context.globalAlpha = renderedState.opacity
+      context.fillStyle = particle.color
+      context.beginPath()
+      context.arc(drawX, drawY, particle.radius, 0, Math.PI * 2)
+      context.fill()
+    }
+
+    const links = linksData.current
+    const opacities = linkOpacity.current
+    context.lineCap = 'round'
+    context.strokeStyle = 'rgb(255 255 255 / 72%)'
+    context.lineWidth = 0.85
+
+    for (let index = 0; index < links.length; index += 1) {
+      const link = links[index]
+      const start = states[link.startIndex]
+      const end = states[link.endIndex]
+      const startVisible = start.opacity > SETTLE_OPACITY_EPSILON
+      const endVisible = end.opacity > SETTLE_OPACITY_EPSILON
+      let targetOpacity = 0
+
+      if (startVisible && endVisible) {
+        const linkDistance = Math.hypot(start.x - end.x, start.y - end.y)
+        const wasLinked = opacities[index] > SETTLE_OPACITY_EPSILON
+        const distanceLimit = wasLinked ? config.linkReleaseDistance : config.linkSnapDistance
+
+        if (linkDistance <= distanceLimit) {
+          const proximity = 1 - Math.min(linkDistance, config.linkReleaseDistance) / config.linkReleaseDistance
+          targetOpacity = 0.18 + proximity * 0.38
+        }
+      }
+
+      opacities[index] = reducedMotion.current
+        ? targetOpacity
+        : lerpTowards(opacities[index], targetOpacity, deltaSeconds, OPACITY_EASE_TAU)
+
+      if (opacities[index] <= SETTLE_OPACITY_EPSILON) continue
+
+      anyVisible = true
+      context.globalAlpha = opacities[index]
+      context.beginPath()
+      context.moveTo(start.x, start.y)
+      context.lineTo(end.x, end.y)
+      context.stroke()
+    }
+
+    context.restore()
+
+    return isWithinBounds || anyVisible
+  }
+
+  function startLoop() {
+    if (rafId.current) return
+
+    wrapper.current?.classList.add(styles.spotlightActive)
+    lastFrameTime.current = performance.now()
+
+    const tick = (time) => {
+      const deltaSeconds = Math.min(
+        MAX_FRAME_DELTA_SECONDS,
+        Math.max(0, (time - lastFrameTime.current) / 1000),
+      )
+      lastFrameTime.current = time
+
+      const shouldContinue = drawFrame(deltaSeconds)
+
+      if (shouldContinue) {
+        rafId.current = requestAnimationFrame(tick)
+      } else {
+        rafId.current = null
+        wrapper.current?.classList.remove(styles.spotlightActive)
+      }
+    }
+
+    rafId.current = requestAnimationFrame(tick)
   }
 
   const applyPointerPosition = (svgX, svgY) => {
-    if (!particleClip.current) return
-
+    pointer.current.x = svgX
+    pointer.current.y = svgY
     reveal.current?.setAttribute('cx', svgX)
     reveal.current?.setAttribute('cy', svgY)
-    particleClip.current.setAttribute('cx', svgX)
-    particleClip.current.setAttribute('cy', svgY)
-    positionParticles(svgX, svgY)
-
-    const isWithinBounds = svgX >= 0 && svgX <= viewBoxWidth
-      && svgY >= 0 && svgY <= viewBoxHeight
-    wrapper.current?.classList.toggle(styles.spotlightActive, isWithinBounds)
+    startLoop()
   }
+
+  const park = () => applyPointerPosition(config.parkedPointer, config.parkedPointer)
 
   const updateLocalPointer = (event) => {
     if (!wrapper.current) return
@@ -375,33 +517,24 @@ export function TitleParticleText({
     const bounds = wrapper.current.getBoundingClientRect()
     const svgX = ((event.clientX - bounds.left) / bounds.width) * viewBoxWidth
     const svgY = ((event.clientY - bounds.top) / bounds.height) * viewBoxHeight
-
-    pendingPointer.current = { x: svgX, y: svgY }
-    if (pointerFrame.current) return
-
-    pointerFrame.current = requestAnimationFrame(() => {
-      const point = pendingPointer.current
-      applyPointerPosition(point.x, point.y)
-      pointerFrame.current = null
-    })
+    applyPointerPosition(svgX, svgY)
   }
 
-  useEffect(() => {
-    if (!particles.length) return
-
-    applyPointerPosition(config.parkedPointer, config.parkedPointer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [particles])
+  useImperativeHandle(forwardedRef, () => ({
+    applyPointerPosition,
+    element: wrapper.current,
+    park,
+  }))
 
   const fillMaskId = `${uid}-fill-mask`
-  const particleClipId = `${uid}-particle-clip`
+  const textX = textAlign === 'left' ? 0 : viewBoxWidth / 2
 
   return (
     <div
       className={`${styles.interaction} ${className}`}
-      onPointerDown={updateLocalPointer}
-      onPointerLeave={() => applyPointerPosition(config.parkedPointer, config.parkedPointer)}
-      onPointerMove={updateLocalPointer}
+      onPointerDown={interactive ? updateLocalPointer : undefined}
+      onPointerLeave={interactive ? park : undefined}
+      onPointerMove={interactive ? updateLocalPointer : undefined}
       ref={wrapper}
       style={style}
     >
@@ -428,11 +561,20 @@ export function TitleParticleText({
                 fontWeight,
                 letterSpacing: `${letterSpacing}px`,
               }}
-              textAnchor="middle"
-              x={viewBoxWidth / 2}
+              textAnchor={textAlign === 'left' ? 'start' : 'middle'}
+              x={textX}
               y={baseline}
             >
-              <tspan fill="#fff">{text}</tspan>
+              {displayLines.map((line, index) => (
+                <tspan
+                  key={line}
+                  dy={index === 0 ? 0 : resolvedLineHeight}
+                  fill="#fff"
+                  x={textX}
+                >
+                  {line}
+                </tspan>
+              ))}
             </text>
             <circle
               cx={config.parkedPointer}
@@ -442,14 +584,6 @@ export function TitleParticleText({
               ref={reveal}
             />
           </mask>
-          <clipPath clipPathUnits="userSpaceOnUse" id={particleClipId}>
-            <circle
-              cx={config.parkedPointer}
-              cy={config.parkedPointer}
-              r={config.clipRadius}
-              ref={particleClip}
-            />
-          </clipPath>
         </defs>
 
         <g className={styles.fill} mask={`url(#${fillMaskId})`} style={{ fill: textColor }}>
@@ -461,53 +595,24 @@ export function TitleParticleText({
               fontWeight,
               letterSpacing: `${letterSpacing}px`,
             }}
-            textAnchor="middle"
-            x={viewBoxWidth / 2}
+            textAnchor={textAlign === 'left' ? 'start' : 'middle'}
+            x={textX}
             y={baseline}
           >
-            {text}
+            {displayLines.map((line, index) => (
+              <tspan key={line} dy={index === 0 ? 0 : resolvedLineHeight} x={textX}>
+                {line}
+              </tspan>
+            ))}
           </text>
         </g>
-
-        <g className={styles.particleLinks} clipPath={`url(#${particleClipId})`}>
-          {links.map((link, index) => (
-            <line
-              key={link.key}
-              ref={(element) => {
-                particleLinkElements.current[index] = element
-              }}
-              x1={particles[link.startIndex]?.x ?? 0}
-              y1={particles[link.startIndex]?.y ?? 0}
-              x2={particles[link.endIndex]?.x ?? 0}
-              y2={particles[link.endIndex]?.y ?? 0}
-            />
-          ))}
-        </g>
-
-        <g className={styles.particles} clipPath={`url(#${particleClipId})`}>
-          {particles.map((particle, index) => (
-            <circle
-              key={`${particle.x}-${particle.y}`}
-              ref={(element) => {
-                particleElements.current[index] = element
-              }}
-              cx={particle.x}
-              cy={particle.y}
-              r={particle.radius}
-              fill={particle.color}
-              className={particle.linked ? styles.linkedParticle : undefined}
-              style={{
-                '--particle-drift-start-x': `${-particle.driftX}px`,
-                '--particle-drift-start-y': `${-particle.driftY}px`,
-                '--particle-drift-x': `${particle.driftX}px`,
-                '--particle-drift-y': `${particle.driftY}px`,
-                '--particle-drift-duration': `${particle.driftDuration}s`,
-                '--particle-drift-delay': `${particle.driftDelay}s`,
-              }}
-            />
-          ))}
-        </g>
       </svg>
+
+      <canvas
+        aria-hidden="true"
+        className={styles.particleCanvas}
+        ref={canvas}
+      />
     </div>
   )
-}
+})

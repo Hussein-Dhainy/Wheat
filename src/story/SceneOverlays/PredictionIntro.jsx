@@ -1,7 +1,15 @@
 import { useEffect, useRef } from 'react'
 import { PREDICTION_CONTENT } from '../../config/predictionContent.js'
+import { TitleParticleText } from '../components/TitleParticleText/TitleParticleText.jsx'
 import styles from './SceneOverlays.module.css'
-import { PREDICTION_TITLE_LINES, SceneTitleLines } from './SceneTitleLines.jsx'
+import {
+  BOLD_TITLE_FONT_SIZE,
+  BOLD_TITLE_FONT_WEIGHT,
+  BOLD_TITLE_LETTER_SPACING,
+  BOLD_TITLE_LINE_HEIGHT,
+  PREDICTION_TITLE_BOX,
+  PREDICTION_TITLE_LINE_TEXTS,
+} from './sceneTitleBox.js'
 
 export function PredictionIntro({
   predictionTestsOpen,
@@ -50,13 +58,21 @@ export function PredictionIntro({
         inert={predictionTestsOpen}
       >
         <div className={styles.predictionCopy}>
-          <h2 id="prediction-title" className={styles.visuallyHidden}>
-            {PREDICTION_CONTENT.title}
-          </h2>
-          <SceneTitleLines
+          <TitleParticleText
+            as="h2"
+            baseline={PREDICTION_TITLE_BOX.baseline}
             className={styles.predictionTitleLines}
-            lines={PREDICTION_TITLE_LINES}
+            fontSize={BOLD_TITLE_FONT_SIZE}
+            fontWeight={BOLD_TITLE_FONT_WEIGHT}
+            headingId="prediction-title"
+            letterSpacing={BOLD_TITLE_LETTER_SPACING}
+            lineHeight={BOLD_TITLE_LINE_HEIGHT}
+            lines={PREDICTION_TITLE_LINE_TEXTS}
+            text={PREDICTION_CONTENT.title}
+            textAlign="left"
             textColor="#fff"
+            viewBoxHeight={PREDICTION_TITLE_BOX.viewBoxHeight}
+            viewBoxWidth={PREDICTION_TITLE_BOX.viewBoxWidth}
           />
           <p>{PREDICTION_CONTENT.body}</p>
         </div>

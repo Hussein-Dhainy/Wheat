@@ -1,5 +1,5 @@
 export const PREDICTION_CONTENT = {
-  title: 'The field is the real test.',
+  title: 'We take it to the field.',
   body: 'Selected wheat lines leave controlled conditions behind. Wind, drought, disease, soil, and spacing reveal how each plant responds.',
   actionLabel: 'Experience the tests',
   conditionPrompt: 'Select a field condition',
