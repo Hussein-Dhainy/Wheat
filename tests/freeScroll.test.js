@@ -8,6 +8,7 @@ import {
   beginVirtualScrollInteraction,
   createVirtualScrollState,
   endVirtualScrollInteraction,
+  jumpVirtualScrollToPosition,
   stepVirtualScrollScene,
   VIRTUAL_SCROLL,
 } from '../src/experience/virtualScroll.js'
@@ -20,291 +21,229 @@ function createStateAt(position) {
   return state
 }
 
-test('Scene 2 does not settle when its target remains inside the scene', () => {
-  const state = createStateAt(3)
-  addVirtualScrollDelta(state, 0.4)
+function settle(state, frameCount = 600, frameDelta = 1 / 60) {
+  for (let frame = 0; frame < frameCount; frame += 1) {
+    advanceVirtualScroll(state, frameDelta)
+  }
+  return state
+}
 
-  advanceVirtualScroll(state, VIRTUAL_SCROLL.snapDelaySeconds)
+test('direct input keeps its exact target after input goes idle', () => {
+  const state = createStateAt(3)
+
+  addVirtualScrollDelta(state, 0.4)
+  settle(state)
 
   assert.equal(state.target, 3.4)
-  assert.equal(state.snapPending, false)
+  assert.equal(state.current, 3.4)
+  assert.equal(state.isSnapping, false)
 })
 
-test('Scene 2 settles forward entry on the fully visible seed carousel', () => {
+test('a diagonal transition remains continuous while wheel input is active', () => {
   const sceneTwo = SCENE_TIMELINE.scenes[1]
-  const carouselSnap = sceneTwo.freeScrollSnapRanges.find(
-    (range) => range.id === 'seed-carousel-arrival',
-  )
-  const state = createStateAt(
-    sceneTwo.start + sceneTwo.contentLength * 0.79,
+  const state = createStateAt(sceneTwo.transitionStart - 0.1)
+
+  addVirtualScrollDelta(state, 0.5)
+  advanceVirtualScroll(
+    state,
+    VIRTUAL_SCROLL.transitionSettleDelaySeconds * 0.5,
   )
 
-  addVirtualScrollDelta(state, sceneTwo.contentLength * 0.02)
-  advanceVirtualScroll(state, VIRTUAL_SCROLL.snapDelaySeconds)
-
+  assert.equal(state.target, sceneTwo.transitionStart + 0.4)
   assert.equal(
-    state.target,
-    sceneTwo.start + sceneTwo.contentLength * carouselSnap.targetProgress,
+    resolveSceneTimeline(state.target, state.timeline).phase,
+    'transition',
   )
-  assert.equal(state.isSnapping, true)
-  assert.equal(state.snapPending, false)
+  assert.equal(state.isSnapping, false)
 })
 
-test('Scene 2 carousel snap does not resist upward scrolling out', () => {
+test('idle input in the first half of a transition settles to its start', () => {
   const sceneTwo = SCENE_TIMELINE.scenes[1]
-  const start = sceneTwo.start + sceneTwo.contentLength * 0.9
-  const state = createStateAt(start)
+  const state = createStateAt(sceneTwo.transitionStart - 0.1)
 
-  addVirtualScrollDelta(state, -sceneTwo.contentLength * 0.05)
-  advanceVirtualScroll(state, VIRTUAL_SCROLL.snapDelaySeconds)
-
-  assert.equal(state.target, start - sceneTwo.contentLength * 0.05)
-})
-
-test('Scene 2 requires additional pressure after a forward boundary crossing', () => {
-  const sceneTwo = SCENE_TIMELINE.scenes[1]
-  const forward = createStateAt(sceneTwo.transitionStart - 0.05)
-  addVirtualScrollDelta(forward, 0.084)
-  advanceVirtualScroll(forward, VIRTUAL_SCROLL.snapDelaySeconds)
-
-  assert.equal(forward.target, sceneTwo.transitionStart)
-  assert.equal(forward.current < sceneTwo.transitionStart, true)
-
-  addVirtualScrollDelta(forward, sceneTwo.forwardExitResistance - 0.01)
-  assert.equal(forward.target, sceneTwo.transitionStart)
-
-  addVirtualScrollDelta(forward, 0.01)
-  assert.equal(forward.target, sceneTwo.end)
-})
-
-test('Scene 2 reverse crossing first settles on the fully visible DNA', () => {
-  const sceneTwo = SCENE_TIMELINE.scenes[1]
-  const reverse = createStateAt(sceneTwo.start + 0.05)
-  addVirtualScrollDelta(reverse, -0.084)
-  advanceVirtualScroll(reverse, VIRTUAL_SCROLL.snapDelaySeconds)
-
-  assert.equal(reverse.target, sceneTwo.start)
-  assert.equal(reverse.boundaryResistanceBoundary, sceneTwo.start)
-})
-
-test('one additional upward push releases the Scene 2 reverse detent', () => {
-  const sceneTwo = SCENE_TIMELINE.scenes[1]
-  const previousScene = SCENE_TIMELINE.scenes[0]
-  const reverse = createStateAt(sceneTwo.start + 0.05)
-  addVirtualScrollDelta(reverse, -0.084)
-
-  addVirtualScrollDelta(reverse, -sceneTwo.reverseEntryResistance)
-
-  assert.equal(reverse.target, previousScene.transitionStart)
-  assert.equal(reverse.boundaryResistanceBoundary, null)
-})
-
-test('Scene 2 resistance cannot settle on a partially visible diagonal', () => {
-  const sceneTwo = SCENE_TIMELINE.scenes[1]
-  const state = createStateAt(sceneTwo.transitionStart - 0.05)
-  addVirtualScrollDelta(state, 0.084)
-
-  for (let frame = 0; frame < 600; frame += 1) {
-    advanceVirtualScroll(state, 1 / 60)
-  }
-
-  const position = resolveSceneTimeline(state.current, state.timeline)
-  assert.equal(state.current, sceneTwo.transitionStart)
-  assert.equal(position.currentIndex, sceneTwo.index)
-  assert.equal(position.progress, 0)
-})
-
-test('touch release holds at the Scene 2 detent until another push', () => {
-  const sceneTwo = SCENE_TIMELINE.scenes[1]
-  const state = createStateAt(sceneTwo.transitionStart - 0.03)
-  beginVirtualScrollInteraction(state)
-  addVirtualScrollDelta(state, 0.06)
-  advanceVirtualScroll(state, 1 / 60)
-
-  endVirtualScrollInteraction(state)
+  addVirtualScrollDelta(state, 0.4)
+  settle(state)
 
   assert.equal(state.target, sceneTwo.transitionStart)
-  assert.equal(state.snapPending, false)
+  assert.equal(state.current, sceneTwo.transitionStart)
+  assert.equal(state.damping, VIRTUAL_SCROLL.transitionSettleDamping)
+})
+
+test('idle input in the second half of a transition settles to its end', () => {
+  const sceneTwo = SCENE_TIMELINE.scenes[1]
+  const state = createStateAt(sceneTwo.transitionStart - 0.1)
+
+  addVirtualScrollDelta(state, 0.8)
+  settle(state)
+
+  assert.equal(state.target, sceneTwo.end)
+  assert.equal(state.current, sceneTwo.end)
+  assert.equal(state.damping, VIRTUAL_SCROLL.transitionSettleDamping)
+})
+
+test('an exact transition midpoint settles in the input direction', () => {
+  const sceneTwo = SCENE_TIMELINE.scenes[1]
+  const forward = createStateAt(sceneTwo.transitionStart - 0.1)
+  const reverse = createStateAt(sceneTwo.end + 0.1)
+
+  addVirtualScrollDelta(forward, 0.6)
+  addVirtualScrollDelta(reverse, -0.6)
+  advanceVirtualScroll(forward, VIRTUAL_SCROLL.transitionSettleDelaySeconds)
+  advanceVirtualScroll(reverse, VIRTUAL_SCROLL.transitionSettleDelaySeconds)
+
+  assert.equal(forward.target, sceneTwo.end)
+  assert.equal(reverse.target, sceneTwo.transitionStart)
+})
+
+test('forward scene-edge crossings do not consume input', () => {
+  const sceneTwo = SCENE_TIMELINE.scenes[1]
+  const state = createStateAt(sceneTwo.transitionStart - 0.05)
+
+  addVirtualScrollDelta(state, 0.084)
+
+  assert.equal(state.target, sceneTwo.transitionStart + 0.034)
+  assert.equal(state.isSnapping, false)
+})
+
+test('reverse scene-edge crossings do not consume input', () => {
+  const sceneTwo = SCENE_TIMELINE.scenes[1]
+  const state = createStateAt(sceneTwo.start + 0.05)
+
+  addVirtualScrollDelta(state, -0.084)
+
+  assert.equal(state.target, sceneTwo.start - 0.034)
+  assert.equal(state.isSnapping, false)
+})
+
+test('touch release preserves the continuous target', () => {
+  const state = createStateAt(3)
 
   beginVirtualScrollInteraction(state)
-  addVirtualScrollDelta(state, sceneTwo.forwardExitResistance)
+  addVirtualScrollDelta(state, 0.35)
+  advanceVirtualScroll(state, 1 / 60)
+  endVirtualScrollInteraction(state)
+
+  assert.equal(state.target, 3.35)
+  assert.equal(state.isInteracting, false)
+  assert.equal(state.isSnapping, false)
+})
+
+test('touch release settles a diagonal transition immediately', () => {
+  const sceneTwo = SCENE_TIMELINE.scenes[1]
+  const state = createStateAt(sceneTwo.transitionStart - 0.1)
+
+  beginVirtualScrollInteraction(state)
+  addVirtualScrollDelta(state, 0.8)
   endVirtualScrollInteraction(state)
 
   assert.equal(state.target, sceneTwo.end)
+  assert.equal(state.isInteracting, false)
+  assert.equal(state.isSnapping, true)
 })
 
-test('entering Scene 2 from Scene 1 still settles to the scene boundary', () => {
-  const state = createStateAt(1.6)
-  addVirtualScrollDelta(state, 0.3)
+test('direct reversal discards only the unrendered target backlog', () => {
+  const state = createStateAt(3)
+  state.target = 3.4
 
-  advanceVirtualScroll(state, VIRTUAL_SCROLL.snapDelaySeconds)
+  addVirtualScrollDelta(state, -0.2)
 
-  assert.equal(state.target, 1.75)
+  assert.equal(state.target, 2.8)
+  assert.equal(state.inputDirection, -1)
 })
 
-test('same-direction wheel input carries through the Scene 1 to 2 boundary', () => {
-  const state = createStateAt(1.3)
-  state.target = 1.75
+test('direct input cancels a keyboard or menu settle from the visible frame', () => {
+  const state = createStateAt(3)
+  state.target = 3.5
   state.isSnapping = true
 
-  addVirtualScrollDelta(state, 0.56)
+  addVirtualScrollDelta(state, 0.2)
 
-  assert.ok(state.target > SCENE_TIMELINE.scenes[1].start)
-  assert.equal(state.target, 1.86)
+  assert.equal(state.target, 3.2)
   assert.equal(state.isSnapping, false)
-  assert.equal(state.snapPending, true)
 })
 
-test('repeated forward wheel input reaches Scene 2 without waiting to settle', () => {
-  const state = createStateAt(SCENE_TIMELINE.scenes[0].start)
+test('reduced motion preserves continuous positions without interpolation', () => {
+  const sceneTwo = SCENE_TIMELINE.scenes[1]
+  const state = createStateAt(sceneTwo.transitionStart - 0.05)
+  state.reducedMotion = true
 
-  for (let event = 0; event < 4; event += 1) {
-    addVirtualScrollDelta(state, 0.56)
-    for (let frame = 0; frame < 6; frame += 1) {
-      advanceVirtualScroll(state, 1 / 60)
-    }
-  }
+  addVirtualScrollDelta(state, 0.084)
+  advanceVirtualScroll(state, 1 / 60)
 
-  assert.ok(state.current > SCENE_TIMELINE.scenes[1].start)
-  assert.ok(state.target > SCENE_TIMELINE.scenes[1].start)
+  assert.equal(state.target, sceneTwo.transitionStart + 0.034)
+  assert.equal(state.current, state.target)
 })
 
-test('keyboard input moves incrementally within Scene 2', () => {
+test('keyboard input remains incremental inside long scenes', () => {
   const forward = createStateAt(3)
-  stepVirtualScrollScene(forward, 1)
-
   const reverse = createStateAt(3)
+
+  stepVirtualScrollScene(forward, 1)
   stepVirtualScrollScene(reverse, -1)
 
   assert.equal(forward.target, 3 + VIRTUAL_SCROLL.freeScrollKeyboardStep)
   assert.equal(reverse.target, 3 - VIRTUAL_SCROLL.freeScrollKeyboardStep)
+  assert.equal(forward.isSnapping, true)
+  assert.equal(reverse.isSnapping, true)
 })
 
-test('keyboard input respects both Scene 2 boundary detents', () => {
+test('keyboard input completes only the nearby transition at scene edges', () => {
+  const sceneOne = SCENE_TIMELINE.scenes[0]
   const sceneTwo = SCENE_TIMELINE.scenes[1]
-  const previousScene = SCENE_TIMELINE.scenes[0]
   const forward = createStateAt(sceneTwo.transitionStart - 0.3)
-  stepVirtualScrollScene(forward, 1)
-  assert.equal(forward.target, sceneTwo.transitionStart)
-  stepVirtualScrollScene(forward, 1)
-
   const reverse = createStateAt(sceneTwo.start + 0.3)
+
+  stepVirtualScrollScene(forward, 1)
   stepVirtualScrollScene(reverse, -1)
 
   assert.equal(forward.target, sceneTwo.end)
-  assert.equal(reverse.target, sceneTwo.start)
+  assert.equal(reverse.target, sceneOne.transitionStart)
+})
+
+test('keyboard input resolves an active transition in either direction', () => {
+  const sceneTwo = SCENE_TIMELINE.scenes[1]
+  const transitionPosition = sceneTwo.transitionStart + 0.4
+  const forward = createStateAt(transitionPosition)
+  const reverse = createStateAt(transitionPosition)
+
+  stepVirtualScrollScene(forward, 1)
   stepVirtualScrollScene(reverse, -1)
-  assert.equal(reverse.target, previousScene.transitionStart)
+
+  assert.equal(forward.target, sceneTwo.end)
+  assert.equal(reverse.target, sceneTwo.transitionStart)
 })
 
-test('reduced motion keeps the Scene 2 detent without a partial frame', () => {
-  const sceneTwo = SCENE_TIMELINE.scenes[1]
-  const state = createStateAt(sceneTwo.transitionStart - 0.05)
-  state.reducedMotion = true
-  addVirtualScrollDelta(state, 0.084)
+test('keyboard input uses semantic stops in non-free-scroll scenes', () => {
+  const landing = SCENE_TIMELINE.scenes[0]
+  const forward = createStateAt(landing.start)
+  const reverse = createStateAt(landing.start)
 
-  advanceVirtualScroll(state, VIRTUAL_SCROLL.snapDelaySeconds)
+  stepVirtualScrollScene(forward, 1)
+  stepVirtualScrollScene(reverse, -1)
 
-  assert.equal(state.target, sceneTwo.transitionStart)
-  assert.equal(state.current, sceneTwo.transitionStart)
-
-  addVirtualScrollDelta(state, sceneTwo.forwardExitResistance)
-  advanceVirtualScroll(state, 1 / 60)
-
-  assert.equal(state.target, sceneTwo.end)
-  assert.equal(state.current, sceneTwo.end)
+  assert.equal(forward.target, SCENE_TIMELINE.scenes[1].start)
+  assert.equal(reverse.target, landing.leadingHoldStart)
 })
 
-test('reversing while Scene 2 resistance is armed cancels it immediately', () => {
-  const sceneTwo = SCENE_TIMELINE.scenes[1]
-  const state = createStateAt(sceneTwo.transitionStart - 0.02)
-  addVirtualScrollDelta(state, 0.03)
+test('menu jumps retain their deliberate semantic settle', () => {
+  const state = createStateAt(SCENE_TIMELINE.scenes[0].start)
+  const target = SCENE_TIMELINE.scenes[3].start
 
-  assert.equal(state.target, sceneTwo.transitionStart)
-  assert.equal(state.boundaryResistanceBoundary, sceneTwo.transitionStart)
+  jumpVirtualScrollToPosition(state, target)
 
-  addVirtualScrollDelta(state, -0.04)
-
-  assert.equal(state.boundaryResistanceBoundary, null)
-  assert.ok(state.target < sceneTwo.transitionStart)
-})
-
-test('magnetic settling remains enabled outside Scene 2', () => {
-  const state = createStateAt(6.2)
-  addVirtualScrollDelta(state, 0.2)
-
-  advanceVirtualScroll(state, VIRTUAL_SCROLL.snapDelaySeconds)
-
-  assert.equal(state.target, 6.75)
-})
-
-test('one reverse wheel event settles from the Scene 3 anchor to Scene 2', () => {
-  const sceneThreeStart = SCENE_TIMELINE.scenes[2].start
-  const sceneTwoTransitionStart = SCENE_TIMELINE.scenes[1].transitionStart
-  const state = createStateAt(sceneThreeStart)
-
-  addVirtualScrollDelta(state, -0.56)
-  advanceVirtualScroll(state, VIRTUAL_SCROLL.snapDelaySeconds)
-
-  assert.equal(state.target, sceneTwoTransitionStart)
+  assert.equal(state.target, target)
   assert.equal(state.isSnapping, true)
-  assert.equal(state.snapPending, false)
+  assert.ok(state.damping < VIRTUAL_SCROLL.damping)
 })
 
-test('a small reverse nudge after settling on Scene 3 still reaches Scene 2\'s end', () => {
-  // `current` eases toward `target` every frame, so pausing right after a
-  // settle and then reversing lets `current` drift a hair past the boundary
-  // into Scene 2's exit transition before the idle timer fires. That used to
-  // make free-scroll target resolution bail out (it only recognised the
-  // settled scene's own 'section' phase) and fall back to nearest-snap,
-  // which just reabsorbed the nudge back into Scene 3's start.
-  const sceneTwo = SCENE_TIMELINE.scenes[1]
-  const sceneThree = SCENE_TIMELINE.scenes[2]
-  const state = createStateAt(sceneThree.start)
+test('continuous damping is frame-rate independent', () => {
+  const atSixtyFps = createStateAt(3)
+  const atThirtyFps = createStateAt(3)
+  atSixtyFps.target = 4
+  atThirtyFps.target = 4
 
-  addVirtualScrollDelta(state, -0.01)
-  for (let frame = 0; frame < 9; frame += 1) {
-    advanceVirtualScroll(state, 1 / 60)
-  }
+  settle(atSixtyFps, 60, 1 / 60)
+  settle(atThirtyFps, 30, 1 / 30)
 
-  assert.ok(state.current < sceneThree.start)
-  assert.equal(state.target, sceneTwo.transitionStart)
-})
-
-test('one reverse wheel event moves incrementally from visible Scene 3 back toward Scene 2', () => {
-  // Direct scroll input while mid-transition used to force-commit straight
-  // to that transition's boundary regardless of how far the input actually
-  // reversed — which meant a single wheel tick against a snap already in
-  // flight could yank the view all the way back, fighting anyone who meant
-  // to keep scrolling. It now just moves by the input's own amount, same as
-  // scrolling anywhere else; a pause afterward is what decides where it
-  // finally settles (see the idle-snap tests above).
-  const sceneTwo = SCENE_TIMELINE.scenes[1]
-  const visibleSceneThreePosition = sceneTwo.transitionStart
-    + sceneTwo.exitTransitionLength * 0.6
-  const state = createStateAt(visibleSceneThreePosition)
-
-  addVirtualScrollDelta(state, -0.56)
-
-  assert.equal(state.target, visibleSceneThreePosition - 0.56)
-  assert.equal(state.isSnapping, false)
-  assert.equal(state.snapPending, true)
-})
-
-test('reversing an in-progress Scene 2 to 3 transition moves incrementally instead of committing', () => {
-  const sceneTwo = SCENE_TIMELINE.scenes[1]
-  const startPosition = sceneTwo.transitionStart + 0.6
-  const state = createStateAt(startPosition)
-  state.target = sceneTwo.end
-  state.isSnapping = true
-
-  addVirtualScrollDelta(state, -0.56)
-
-  // Direct input cancels the in-flight forward snap (isSnapping resets and
-  // its target snaps back to the current position) before the reversal's
-  // own delta is applied, so the two starting scenarios above land on the
-  // same result regardless of whether a snap was already in flight.
-  assert.equal(state.target, startPosition - 0.56)
-  assert.equal(state.isSnapping, false)
-  assert.equal(state.snapPending, true)
+  assert.ok(Math.abs(atSixtyFps.current - atThirtyFps.current) < 1e-10)
 })

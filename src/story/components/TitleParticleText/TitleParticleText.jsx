@@ -30,6 +30,11 @@ const POSITION_EASE_TAU = 0.1
 const OPACITY_EASE_TAU = 0.045
 const SETTLE_OPACITY_EPSILON = 0.003
 const MAX_FRAME_DELTA_SECONDS = 0.1
+const OUTLINE_HIGHLIGHT_DASH_LENGTH = 48
+const OUTLINE_HIGHLIGHT_GAP_LENGTH = 260
+const OUTLINE_HIGHLIGHT_SPEED = 30
+const OUTLINE_HIGHLIGHT_STROKE_PX = 2.6
+const OUTLINE_HIGHLIGHT_OPACITY = 0.88
 
 function computeEffectConfig({
   baseline,
@@ -47,6 +52,8 @@ function computeEffectConfig({
   const clipRadius = outerRadius + BASE_CLIP_MARGIN * scale
   const activationRadius = effectRadius + BASE_ACTIVATION_MARGIN * scale
   const innerRadius = BASE_INNER_RADIUS * scale
+  const outlineHighlightDashLength = OUTLINE_HIGHLIGHT_DASH_LENGTH * scale
+  const outlineHighlightGapLength = OUTLINE_HIGHLIGHT_GAP_LENGTH * scale
 
   return {
     activationRadius,
@@ -63,6 +70,12 @@ function computeEffectConfig({
     linkSnapDistance: BASE_LINK_SNAP_DISTANCE * scale,
     linkSourceDistance: BASE_LINK_SOURCE_DISTANCE * scale,
     outerRadius,
+    outlineHighlightCycle: outlineHighlightDashLength + outlineHighlightGapLength,
+    outlineHighlightDashPattern: [
+      outlineHighlightDashLength,
+      outlineHighlightGapLength,
+    ],
+    outlineHighlightSpeed: OUTLINE_HIGHLIGHT_SPEED * scale,
     parkedPointer: -clipRadius - activationRadius,
     radialJitter: BASE_RADIAL_JITTER * scale,
     ringSwitchHysteresis: BASE_RING_SWITCH_HYSTERESIS * scale,
@@ -103,6 +116,51 @@ function configureContext(context, config) {
   if ('letterSpacing' in context) {
     context.letterSpacing = `${config.letterSpacing}px`
   }
+}
+
+function drawOutlineHighlights(
+  context,
+  config,
+  lines,
+  lineHeight,
+  textAlign,
+  centerX,
+  centerY,
+  elapsedSeconds,
+  unitsPerCssPixel,
+  reducedMotion,
+) {
+  const textX = textAlign === 'left' ? 0 : config.viewBoxWidth / 2
+  const firstOffset = reducedMotion
+    ? 0
+    : -(elapsedSeconds * config.outlineHighlightSpeed)
+      % config.outlineHighlightCycle
+
+  context.save()
+  context.beginPath()
+  context.arc(centerX, centerY, config.effectRadius, 0, Math.PI * 2)
+  context.clip()
+  configureContext(context, config)
+  context.textAlign = textAlign
+  context.fillStyle = 'transparent'
+  context.strokeStyle = '#fff'
+  context.globalAlpha = OUTLINE_HIGHLIGHT_OPACITY
+  context.lineCap = 'round'
+  context.lineJoin = 'round'
+  context.lineWidth = OUTLINE_HIGHLIGHT_STROKE_PX * unitsPerCssPixel
+  context.setLineDash(config.outlineHighlightDashPattern)
+
+  context.lineDashOffset = firstOffset
+  for (let index = 0; index < lines.length; index += 1) {
+    context.strokeText(lines[index], textX, config.baseline + index * lineHeight)
+  }
+
+  context.lineDashOffset = firstOffset - config.outlineHighlightCycle * 0.5
+  for (let index = 0; index < lines.length; index += 1) {
+    context.strokeText(lines[index], textX, config.baseline + index * lineHeight)
+  }
+
+  context.restore()
 }
 
 function createLinks(particles, config) {
@@ -247,6 +305,9 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
   // before.
   lineHeight,
   lines,
+  outlineColor = 'rgb(245 241 231 / 72%)',
+  outlineHighlights = false,
+  outlineWidth = 0,
   seed = 6197,
   style,
   text,
@@ -271,6 +332,7 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
   const uid = useId()
   const wrapper = useRef()
   const reveal = useRef()
+  const outlineReveal = useRef()
   const canvas = useRef()
   const particlesData = useRef([])
   const linksData = useRef([])
@@ -280,6 +342,7 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
   const rafId = useRef(null)
   const lastFrameTime = useRef(0)
   const reducedMotion = useRef(false)
+  const unitsPerCssPixel = useRef(1)
 
   // Sampling (drawing the text to an offscreen canvas and reading alpha to
   // seed particle positions) only needs to happen once per text/font change —
@@ -332,6 +395,10 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
 
     const applySize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+      const renderedWidth = canvasElement.getBoundingClientRect().width
+      unitsPerCssPixel.current = renderedWidth > 0
+        ? viewBoxWidth / renderedWidth
+        : 1
       canvasElement.width = Math.max(1, Math.round(viewBoxWidth * dpr))
       canvasElement.height = Math.max(1, Math.round(viewBoxHeight * dpr))
       const context = canvasElement.getContext('2d')
@@ -362,6 +429,22 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
     context.beginPath()
     context.arc(centerX, centerY, config.clipRadius, 0, Math.PI * 2)
     context.clip()
+
+    if (outlineHighlights && isWithinBounds) {
+      drawOutlineHighlights(
+        context,
+        config,
+        displayLines,
+        resolvedLineHeight,
+        textAlign,
+        centerX,
+        centerY,
+        lastFrameTime.current / 1000,
+        unitsPerCssPixel.current,
+        reducedMotion.current,
+      )
+    }
+
     context.globalCompositeOperation = 'lighter'
 
     for (let index = 0; index < particles.length; index += 1) {
@@ -506,6 +589,8 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
     pointer.current.y = svgY
     reveal.current?.setAttribute('cx', svgX)
     reveal.current?.setAttribute('cy', svgY)
+    outlineReveal.current?.setAttribute('cx', svgX)
+    outlineReveal.current?.setAttribute('cy', svgY)
     startLoop()
   }
 
@@ -527,6 +612,7 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
   }))
 
   const fillMaskId = `${uid}-fill-mask`
+  const outlineMaskId = `${uid}-outline-mask`
   const textX = textAlign === 'left' ? 0 : viewBoxWidth / 2
 
   return (
@@ -584,7 +670,51 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
               ref={reveal}
             />
           </mask>
+          {outlineWidth > 0 ? (
+            <mask id={outlineMaskId} maskUnits="userSpaceOnUse">
+              <rect fill="#000" height={viewBoxHeight} width={viewBoxWidth} />
+              <circle
+                cx={config.parkedPointer}
+                cy={config.parkedPointer}
+                fill="#fff"
+                r={config.effectRadius}
+                ref={outlineReveal}
+              />
+            </mask>
+          ) : null}
         </defs>
+
+        {outlineWidth > 0 ? (
+          <g
+            className={styles.outline}
+            mask={`url(#${outlineMaskId})`}
+            style={{
+              fill: 'none',
+              stroke: outlineColor,
+              strokeWidth: outlineWidth,
+            }}
+          >
+            <text
+              style={{
+                fontFamily: `'${fontFamily}', Inter, ui-sans-serif, system-ui, sans-serif`,
+                fontSize: `${fontSize}px`,
+                fontKerning: 'none',
+                fontWeight,
+                letterSpacing: `${letterSpacing}px`,
+              }}
+              textAnchor={textAlign === 'left' ? 'start' : 'middle'}
+              vectorEffect="non-scaling-stroke"
+              x={textX}
+              y={baseline}
+            >
+              {displayLines.map((line, index) => (
+                <tspan key={line} dy={index === 0 ? 0 : resolvedLineHeight} x={textX}>
+                  {line}
+                </tspan>
+              ))}
+            </text>
+          </g>
+        ) : null}
 
         <g className={styles.fill} mask={`url(#${fillMaskId})`} style={{ fill: textColor }}>
           <text

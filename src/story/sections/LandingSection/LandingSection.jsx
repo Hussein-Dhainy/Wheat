@@ -50,6 +50,9 @@ export function LandingSection({ entered }) {
           headingId="landing-title"
           interactive={false}
           letterSpacing={TITLE_LETTER_SPACING}
+          outlineColor="rgb(245 241 231 / 72%)"
+          outlineHighlights
+          outlineWidth={0.8}
           text={TITLE_TEXT}
           textColor="#f5f1e7"
           viewBoxHeight={TITLE_VIEWBOX_HEIGHT}

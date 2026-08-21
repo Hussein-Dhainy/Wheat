@@ -91,54 +91,34 @@ the timeline configuration. Cameras and decorative spatial systems consume
 overlay layers use the normalized transition offset for a matching restrained
 vertical continuation without introducing another animation clock.
 
-### Magnetic idle snapping
+### Continuous scene input with transition settling
 
-Wheel and touch input update the unbounded virtual position continuously. After
-140 ms without wheel input, the target settles to the nearest semantic scene or
-section start; touch holds suppress that idle timer and request the same settle
-on release. Arrow, Page, and Space keys advance exactly one semantic stop, even
-when configured lengths are fractional. Any new direct input cancels an
-in-progress settle, so direction reversal stays immediate. Reduced motion keeps
-direct input but applies both movement and the final settle without inertial
-interpolation.
+Wheel and touch input add directly to one unbounded target position. The
+displayed position follows that target with frame-rate-independent damping. A
+user may stop at any point in scene content, and reverse input retraces the same
+positions without first releasing a detent.
 
-Scenes configured with `freeScroll: true` opt out of magnetic settling while
-their displayed position remains in that scene. Keyboard input advances through
-those scenes in small continuous increments instead of jumping to their
-beginning or end. Entering a free-scroll scene from a neighboring scene still
-settles to its semantic boundary, and its diagonal exit remains controlled by
-the same virtual position. Interior targets remain unsnapped. A free-scroll
-scene may configure `forwardExitResistance`; on its forward content boundary,
-the crossing gesture is consumed and the visible position is pinned before the
-diagonal. Subsequent same-direction input accumulates pressure until that
-threshold is met, then the adjacent transition completes. Reverse input cancels
-the detent immediately. A free-scroll scene may also configure
-`reverseEntryResistance`; when reverse input crosses its content start from
-inside the scene, that crossing is consumed and the fully visible scene is
-pinned at its start. A subsequent reverse push accumulates the small configured
-pressure and releases into the previous transition. Unconfigured boundaries
-retain the normal rules. These detents create deliberate scene-edge stops
-without letting wheel idle, touch release, reduced motion, or keyboard steps
-park on a partially visible diagonal.
+Scene edges do not consume input and there are no directional resistance values,
+or scene-local snap ranges. This keeps notched wheels, high-resolution trackpads,
+and touch drags on the same continuous path. The diagonal wipe itself is a
+pass-through region: after wheel input pauses there, a short frame-clock delay
+settles with a faster damping rate to the closest fully visible endpoint. Touch
+performs the same settle on release. The midpoint follows the input direction so
+an exact tie remains predictable. Beginning a new touch gesture adopts the exact
+displayed frame as its target so delayed catch-up from a previous gesture cannot
+move underneath the finger.
 
-Free-scroll scenes may additionally define small directional
-`freeScrollSnapRanges`. When input comes to rest inside one of these ranges,
-the target settles to its configured local progress. Scene 2 uses a forward-only
-range for the seed-carousel arrival, ensuring the carousel finishes entering
-before the user pauses while preserving ordinary reverse scrolling through it.
+Keyboard and menu navigation retain deliberate destinations. Arrow, Page, and
+Space keys advance in smaller increments through scenes configured with
+`freeScroll: true`, then complete only the nearby diagonal transition. Scenes
+without long internal content use semantic scene stops. Menu jumps still animate
+to the selected scene start. Any wheel or touch input cancels an in-progress
+keyboard or menu settle from the currently displayed frame.
 
-A fresh input or direction reversal during a diagonal transition commits to that
-transition's boundary in the requested direction. Repeated input already moving
-in the same direction continues accumulating through the boundary, so entering
-a free-scroll scene never discards wheel or touch travel. Scenes without internal
-content begin directly on their exit transition, so reverse input at one of those
-starting anchors targets the preceding transition's beginning. This keeps one
-reverse gesture sufficient even when the preceding scene contains a long
-free-scroll span.
-
-The frame-clock idle accumulator was selected over a browser timeout or CSS
-scroll snapping. It keeps one timing source, is deterministic in unit tests,
-requires no timer cleanup, and works with the viewport-fixed virtual controller.
+Reduced motion uses the same continuous direct-input positions and transition
+endpoints but applies them without interpolation. A velocity-and-friction model
+may replace target damping later if testing shows that physical flick momentum
+is worth the additional tuning; it is not required for transition-only settling.
 
 ## Revisit when
 

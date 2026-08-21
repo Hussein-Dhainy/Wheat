@@ -35,6 +35,10 @@
   pointer-events: none;
 }
 
+.outline {
+  pointer-events: none;
+}
+
 .particleCanvas {
   position: absolute;
   inset: 0;

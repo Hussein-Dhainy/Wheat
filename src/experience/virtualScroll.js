@@ -1,7 +1,6 @@
 import {
   getAdjacentSnapPosition,
   getNearestSnapPosition,
-  isFreeScrollPosition,
   resolveSceneTimeline,
 } from './sceneTimeline.js'
 
@@ -14,7 +13,10 @@ export const VIRTUAL_SCROLL = {
   // for longer after each wheel tick instead of settling almost instantly.
   damping: 2,
   freeScrollKeyboardStep: 0.5,
-  snapDelaySeconds: 0.14,
+  // Direct input stays fully continuous inside scenes. If wheel input stops
+  // inside a diagonal wipe, settle to one of its fully visible endpoints.
+  transitionSettleDamping: 6.5,
+  transitionSettleDelaySeconds: 0.14,
   touchScreensPerViewport: 1.15,
   wheelPixelLimit: 100,
   // Smaller target increments prevent notched mouse wheels from producing
@@ -46,11 +48,6 @@ export function createVirtualScrollState(timeline = INTEGER_SNAP_TIMELINE) {
     : 0
 
   return {
-    boundaryResistanceBoundary: null,
-    boundaryResistanceDirection: 0,
-    boundaryResistancePressure: 0,
-    boundaryResistanceReleaseTarget: null,
-    boundaryResistanceRequired: 0,
     current: initialPosition,
     // Per-frame damping override for the current motion; null means "use
     // the caller's default". Set by jumpVirtualScrollToPosition and cleared
@@ -63,9 +60,9 @@ export function createVirtualScrollState(timeline = INTEGER_SNAP_TIMELINE) {
     isInteracting: false,
     isSnapping: false,
     reducedMotion: false,
-    snapPending: false,
     target: initialPosition,
     timeline,
+    transitionSettlePending: false,
   }
 }
 
@@ -93,46 +90,13 @@ export function configureVirtualScrollTimeline(state, timeline) {
   )
 
   state.timeline = timeline
-  clearBoundaryResistance(state)
+  state.idleSeconds = 0
+  state.transitionSettlePending = false
   if (isAtPreviousInitialPosition) {
     state.current = nextInitialPosition
     state.target = nextInitialPosition
   }
   return state
-}
-
-function hasBoundaryResistance(state) {
-  return Number.isFinite(state.boundaryResistanceBoundary)
-}
-
-function clearBoundaryResistance(state) {
-  state.boundaryResistanceBoundary = null
-  state.boundaryResistanceDirection = 0
-  state.boundaryResistancePressure = 0
-  state.boundaryResistanceReleaseTarget = null
-  state.boundaryResistanceRequired = 0
-}
-
-function armBoundaryResistance(
-  state,
-  boundary,
-  direction,
-  releaseTarget,
-  requiredPressure,
-) {
-  state.boundaryResistanceBoundary = boundary
-  state.boundaryResistanceDirection = direction
-  // The gesture that first reaches the boundary is consumed. Resistance is
-  // accumulated only from subsequent input, guaranteeing a perceptible stop
-  // for both notched wheels and high-resolution trackpads.
-  state.boundaryResistancePressure = 0
-  state.boundaryResistanceReleaseTarget = releaseTarget
-  state.boundaryResistanceRequired = requiredPressure
-  state.target = boundary
-  state.idleSeconds = 0
-  state.inputDirection = direction
-  state.isSnapping = Math.abs(state.target - state.current) >= 1e-7
-  state.snapPending = false
 }
 
 export function normalizeWheelDelta(
@@ -176,12 +140,9 @@ function getFreeScrollTarget(state) {
   const contentStart = cycleStart + scene.start
   const contentEnd = cycleStart + scene.transitionStart
 
-  // `current` eases toward `target` every frame, so a reversal right at a
-  // scene boundary can drift `current` a hair into the exit transition
-  // before input goes idle. Once inside the transition span, `target` sits
-  // past `contentEnd` regardless of which way the gesture is headed, so the
-  // numeric checks below can't disambiguate — direction has to decide which
-  // end of the transition to settle back on.
+  // Keyboard input may arrive while the displayed position is already inside
+  // a wipe. Direction selects the nearby end; direct wheel/touch input never
+  // enters this semantic-settle path.
   if (timelinePosition.phase === 'transition') {
     return state.inputDirection < 0 ? contentEnd : cycleStart + scene.end
   }
@@ -204,34 +165,13 @@ function getFreeScrollTarget(state) {
       + state.timeline.scenes[previousSceneIndex].transitionStart
   }
 
-  const targetProgress = scene.contentLength > 0
-    ? (state.target - contentStart) / scene.contentLength
-    : 1
-  const snapRange = scene.freeScrollSnapRanges.find((range) => (
-    range.direction === state.inputDirection
-    && targetProgress >= range.startProgress
-    && targetProgress < range.endProgress
-  ))
-
-  if (snapRange) {
-    return contentStart + snapRange.targetProgress * scene.contentLength
-  }
-
   return state.target
 }
 
 export function snapVirtualScrollToNearest(state) {
-  if (hasBoundaryResistance(state)) {
-    state.target = state.boundaryResistanceBoundary
-    state.idleSeconds = 0
-    state.snapPending = false
-    state.isSnapping = Math.abs(state.target - state.current) >= 1e-7
-    return state
-  }
-
-  // Free-scroll scenes preserve interior targets. Once input crosses their
-  // content span, complete the adjacent transition so damping cannot stop on
-  // a partially visible diagonal seam.
+  // Keyboard navigation remains incremental through long scene content, then
+  // completes the adjacent wipe at a semantic boundary. Wheel and touch input
+  // never call this function and may rest at any continuous timeline position.
   const freeScrollTarget = getFreeScrollTarget(state)
 
   if (freeScrollTarget === null) {
@@ -245,27 +185,50 @@ export function snapVirtualScrollToNearest(state) {
   }
 
   state.idleSeconds = 0
-  state.snapPending = false
+  state.isSnapping = Math.abs(state.target - state.current) >= 1e-7
+  state.transitionSettlePending = false
+  return state
+}
+
+function settleVirtualScrollTransition(state) {
+  state.idleSeconds = 0
+  state.transitionSettlePending = false
+
+  if (state.timeline.scenes.length === 0) return state
+
+  const timelinePosition = resolveSceneTimeline(state.target, state.timeline)
+  if (timelinePosition.phase !== 'transition') return state
+
+  const scene = state.timeline.scenes[timelinePosition.currentIndex]
+  const cycleStart = timelinePosition.cycleIndex * state.timeline.cycleLength
+  const transitionStart = cycleStart + scene.transitionStart
+  const transitionEnd = cycleStart + scene.end
+  const isPastMidpoint = timelinePosition.progress > 0.5
+  const isAtMidpoint = Math.abs(timelinePosition.progress - 0.5) < 1e-10
+
+  state.target = isPastMidpoint || (isAtMidpoint && state.inputDirection >= 0)
+    ? transitionEnd
+    : transitionStart
+  state.damping = VIRTUAL_SCROLL.transitionSettleDamping
   state.isSnapping = Math.abs(state.target - state.current) >= 1e-7
   return state
 }
 
 export function beginVirtualScrollInteraction(state) {
   state.damping = null
-  state.target = hasBoundaryResistance(state)
-    ? state.boundaryResistanceBoundary
-    : state.current
   state.idleSeconds = 0
+  state.target = state.current
   state.isInteracting = true
   state.isSnapping = false
-  state.snapPending = false
+  state.transitionSettlePending = false
   return state
 }
 
 export function endVirtualScrollInteraction(state) {
   state.isInteracting = false
-  if (state.snapPending) snapVirtualScrollToNearest(state)
-  return state
+  return state.transitionSettlePending
+    ? settleVirtualScrollTransition(state)
+    : state
 }
 
 export function stepVirtualScrollScene(state, direction) {
@@ -273,24 +236,28 @@ export function stepVirtualScrollScene(state, direction) {
   if (direction === 0) return state
 
   state.damping = null
+  state.idleSeconds = 0
+  state.transitionSettlePending = false
   const stepDirection = Math.sign(direction)
   const anchor = state.isSnapping ? state.target : state.current
 
-  // Keyboard input remains incremental inside free-scroll scenes instead of
-  // jumping to the previous or next semantic boundary.
-  const isFreeScrollStep = hasBoundaryResistance(state) || (
-    state.timeline.scenes.length > 0
-    && isFreeScrollPosition(state.current, state.timeline)
-  )
+  // Keyboard input stays incremental inside long scene content. Once it
+  // reaches that scene's wipe, snapVirtualScrollToNearest completes only the
+  // nearby transition instead of skipping a whole content span.
+  const timelinePosition = state.timeline.scenes.length > 0
+    ? resolveSceneTimeline(state.current, state.timeline)
+    : null
+  const activeTimelineScene = timelinePosition
+    ? state.timeline.scenes[timelinePosition.currentIndex]
+    : null
+  const isFreeScrollStep = Boolean(activeTimelineScene?.freeScroll)
 
   if (isFreeScrollStep) {
-    addVirtualScrollDelta(
-      state,
-      stepDirection * VIRTUAL_SCROLL.freeScrollKeyboardStep,
-    )
-    return hasBoundaryResistance(state)
-      ? state
-      : snapVirtualScrollToNearest(state)
+    state.target = anchor
+      + stepDirection * VIRTUAL_SCROLL.freeScrollKeyboardStep
+    state.inputDirection = stepDirection
+    state.isSnapping = Math.abs(state.target - state.current) >= 1e-7
+    return snapVirtualScrollToNearest(state)
   }
 
   state.target = getAdjacentSnapPosition(
@@ -298,10 +265,8 @@ export function stepVirtualScrollScene(state, direction) {
     stepDirection,
     state.timeline,
   )
-  state.idleSeconds = 0
   state.inputDirection = stepDirection
   state.isSnapping = Math.abs(state.target - state.current) >= 1e-7
-  state.snapPending = false
   return state
 }
 
@@ -312,116 +277,9 @@ export function addVirtualScrollDelta(state, delta) {
   state.damping = null
   const inputDirection = Math.sign(delta)
 
-  if (hasBoundaryResistance(state)) {
-    if (inputDirection === state.boundaryResistanceDirection) {
-      state.boundaryResistancePressure += Math.abs(delta)
-      state.idleSeconds = 0
-      state.inputDirection = inputDirection
-      state.snapPending = false
-
-      if (
-        state.boundaryResistancePressure + 1e-10
-        >= state.boundaryResistanceRequired
-      ) {
-        const releaseTarget = state.boundaryResistanceReleaseTarget
-        clearBoundaryResistance(state)
-        state.target = releaseTarget
-        state.isSnapping = Math.abs(state.target - state.current) >= 1e-7
-      } else {
-        state.target = state.boundaryResistanceBoundary
-        state.isSnapping = Math.abs(state.target - state.current) >= 1e-7
-      }
-      return state
-    }
-
-    // Reversing away from the detent cancels it immediately and lets the
-    // ordinary direct-input path continue from the currently displayed frame.
-    clearBoundaryResistance(state)
-  }
-
-  let forwardResistanceBoundary = null
-  let forwardResistanceReleaseTarget = null
-  let forwardResistanceRequired = 0
-  let reverseResistanceBoundary = null
-  let reverseResistanceReleaseTarget = null
-  let reverseResistanceRequired = 0
-
-  if (state.timeline.scenes.length > 0) {
-    const timelinePosition = resolveSceneTimeline(state.current, state.timeline)
-    const scene = state.timeline.scenes[timelinePosition.currentIndex]
-    const isAtEmptySceneStart = inputDirection < 0
-      && timelinePosition.phase === 'transition'
-      && scene.contentLength === 0
-      && timelinePosition.progress <= 0.05
-
-    if (
-      inputDirection > 0
-      && timelinePosition.phase === 'section'
-      && scene.freeScroll
-      && scene.forwardExitResistance > 0
-    ) {
-      const cycleStart = timelinePosition.cycleIndex * state.timeline.cycleLength
-      forwardResistanceBoundary = cycleStart + scene.transitionStart
-      forwardResistanceReleaseTarget = cycleStart + scene.end
-      forwardResistanceRequired = scene.forwardExitResistance
-    }
-
-    if (
-      inputDirection < 0
-      && timelinePosition.phase === 'section'
-      && scene.freeScroll
-      && scene.reverseEntryResistance > 0
-    ) {
-      const cycleStart = timelinePosition.cycleIndex * state.timeline.cycleLength
-      const boundary = cycleStart + scene.start
-
-      // Only arm while approaching the start from inside this scene. If the
-      // view is already parked at the start, one upward input can leave it.
-      if (state.current > boundary + 1e-7) {
-        const previousSceneIndex = (
-          timelinePosition.currentIndex - 1 + state.timeline.scenes.length
-        ) % state.timeline.scenes.length
-        const previousCycleStart = previousSceneIndex > timelinePosition.currentIndex
-          ? cycleStart - state.timeline.cycleLength
-          : cycleStart
-
-        reverseResistanceBoundary = boundary
-        reverseResistanceReleaseTarget = previousCycleStart
-          + state.timeline.scenes[previousSceneIndex].transitionStart
-        reverseResistanceRequired = scene.reverseEntryResistance
-      }
-    }
-
-    // Direct scroll input while mid-transition used to force-jump the
-    // target straight to that transition's boundary instead of letting the
-    // normal "direct input always wins over an in-progress magnetic settle"
-    // path below take over — which meant an idle-snap firing mid-transition
-    // (e.g. from a brief pause between wheel ticks) couldn't be scrolled
-    // past smoothly; continuing to scroll kept getting redirected to a
-    // fixed endpoint. Only the empty-scene-start wraparound case (landing,
-    // whose zero-length content needs to jump straight to the previous
-    // scene) still needs this early, fixed-target handling.
-    if (isAtEmptySceneStart) {
-      let targetCycleIndex = timelinePosition.cycleIndex
-      const previousSceneIndex = (
-        timelinePosition.currentIndex - 1 + state.timeline.scenes.length
-      ) % state.timeline.scenes.length
-      if (previousSceneIndex > timelinePosition.currentIndex) {
-        targetCycleIndex -= 1
-      }
-      const targetPosition = state.timeline.scenes[previousSceneIndex].transitionStart
-
-      state.target = targetCycleIndex * state.timeline.cycleLength
-        + targetPosition
-      state.idleSeconds = 0
-      state.inputDirection = inputDirection
-      state.isSnapping = Math.abs(state.target - state.current) >= 1e-7
-      state.snapPending = false
-      return state
-    }
-  }
-
-  // Direct input always wins over an in-progress magnetic settle.
+  // Direct wheel/touch input always owns the continuous target. Cancel a
+  // keyboard or menu settle from the exact displayed frame, then apply only
+  // the user's requested delta; no scene edge may consume or redirect it.
   if (state.isSnapping) {
     state.target = state.current
     state.isSnapping = false
@@ -435,35 +293,9 @@ export function addVirtualScrollDelta(state, delta) {
   }
 
   state.target += delta
-  if (
-    forwardResistanceBoundary !== null
-    && state.target > forwardResistanceBoundary
-  ) {
-    armBoundaryResistance(
-      state,
-      forwardResistanceBoundary,
-      1,
-      forwardResistanceReleaseTarget,
-      forwardResistanceRequired,
-    )
-    return state
-  }
-  if (
-    reverseResistanceBoundary !== null
-    && state.target <= reverseResistanceBoundary
-  ) {
-    armBoundaryResistance(
-      state,
-      reverseResistanceBoundary,
-      -1,
-      reverseResistanceReleaseTarget,
-      reverseResistanceRequired,
-    )
-    return state
-  }
   state.idleSeconds = 0
   state.inputDirection = inputDirection
-  state.snapPending = true
+  state.transitionSettlePending = true
   return state
 }
 
@@ -481,16 +313,15 @@ export function jumpVirtualScrollToPosition(
 ) {
   assertFiniteNumber(targetPosition, 'targetPosition')
 
-  clearBoundaryResistance(state)
   const direction = Math.sign(targetPosition - state.current) || state.direction
 
   state.damping = damping
-  state.target = targetPosition
   state.idleSeconds = 0
+  state.target = targetPosition
   state.inputDirection = direction
   state.isInteracting = false
   state.isSnapping = Math.abs(state.target - state.current) >= 1e-7
-  state.snapPending = false
+  state.transitionSettlePending = false
   return state
 }
 
@@ -503,13 +334,12 @@ export function advanceVirtualScroll(
   assertFiniteNumber(damping, 'damping')
 
   const previous = state.current
-  const elapsedSeconds = Math.max(0, deltaSeconds)
 
-  if (state.snapPending && !state.isInteracting) {
-    state.idleSeconds += elapsedSeconds
+  if (state.transitionSettlePending && !state.isInteracting) {
+    state.idleSeconds += Math.max(0, deltaSeconds)
 
-    if (state.idleSeconds >= VIRTUAL_SCROLL.snapDelaySeconds) {
-      snapVirtualScrollToNearest(state)
+    if (state.idleSeconds >= VIRTUAL_SCROLL.transitionSettleDelaySeconds) {
+      settleVirtualScrollTransition(state)
     }
   }
 

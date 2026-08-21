@@ -1,5 +1,4 @@
 import { compileSceneTimeline } from '../experience/sceneTimeline.js'
-import { GENETICS_SEED_TIMING } from './geneticsSeeds.js'
 
 // All lengths are virtual scroll units, not seconds. Section lengths control
 // how much wheel/touch travel belongs to fully visible scene content. Exit
@@ -18,20 +17,7 @@ export const SCENE_TIMELINE_CONFIG = [
   {
     id: 'genetics',
     timeline: {
-      forwardExitResistance: 0.18,
       freeScroll: true,
-      freeScrollSnapRanges: [
-        {
-          direction: 1,
-          endProgress: GENETICS_SEED_TIMING.carouselRevealRange[1],
-          id: 'seed-carousel-arrival',
-          startProgress: GENETICS_SEED_TIMING.carouselRevealRange[0],
-          targetProgress: GENETICS_SEED_TIMING.carouselRevealRange[1],
-        },
-      ],
-      // Consume the upward input that first reaches the fully visible DNA.
-      // A tiny additional upward push then releases back into Scene 1.
-      reverseEntryResistance: 0.02,
       sections: [
         {
           description: 'Fibrous genetic strands exchange paths between two bundles.',
@@ -80,10 +66,6 @@ export const SCENE_TIMELINE_CONFIG = [
     id: 'result',
     timeline: {
       freeScroll: true,
-      // Consumes a small over-crossing when scrolling up right at the
-      // start of this scene, instead of immediately releasing back into
-      // Scene 4 — the same buffer genetics uses at its own start.
-      reverseEntryResistance: 0.03,
       sections: [
         {
           description: 'The final grain and closing actions complete the wheat journey.',

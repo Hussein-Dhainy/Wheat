@@ -19,13 +19,6 @@ function assertNonnegativeLength(value, name) {
   if (value < 0) throw new RangeError(`${name} must be zero or greater`)
 }
 
-function assertNormalizedProgress(value, name) {
-  assertFiniteNumber(value, name)
-  if (value < 0 || value > 1) {
-    throw new RangeError(`${name} must be between zero and one`)
-  }
-}
-
 function assertTimeline(timeline) {
   if (
     !timeline
@@ -69,46 +62,6 @@ export function compileSceneTimeline(registry) {
       throw new TypeError(`${sceneId}.timeline.sections must be an array`)
     }
 
-    const configuredFreeScrollSnapRanges = (
-      timelineConfig.freeScrollSnapRanges ?? []
-    )
-    if (!Array.isArray(configuredFreeScrollSnapRanges)) {
-      throw new TypeError(
-        `${sceneId}.timeline.freeScrollSnapRanges must be an array`,
-      )
-    }
-
-    const freeScrollSnapRanges = configuredFreeScrollSnapRanges.map(
-      (range, rangeIndex) => {
-        const name = `${sceneId}.timeline.freeScrollSnapRanges[${rangeIndex}]`
-        const direction = Math.sign(range?.direction ?? 0)
-        if (direction === 0) {
-          throw new RangeError(`${name}.direction must be nonzero`)
-        }
-
-        const startProgress = range.startProgress
-        const endProgress = range.endProgress
-        const targetProgress = range.targetProgress
-        assertNormalizedProgress(startProgress, `${name}.startProgress`)
-        assertNormalizedProgress(endProgress, `${name}.endProgress`)
-        assertNormalizedProgress(targetProgress, `${name}.targetProgress`)
-        if (endProgress <= startProgress) {
-          throw new RangeError(`${name} must end after it starts`)
-        }
-        if (targetProgress < startProgress || targetProgress > endProgress) {
-          throw new RangeError(`${name}.targetProgress must be inside its range`)
-        }
-
-        return Object.freeze({
-          direction,
-          endProgress,
-          id: range.id ?? null,
-          startProgress,
-          targetProgress,
-        })
-      },
-    )
-
     const exitTransitionLength = timelineConfig.exitTransitionLength
       ?? DEFAULT_TRANSITION_LENGTH
     assertPositiveLength(
@@ -134,18 +87,6 @@ export function compileSceneTimeline(registry) {
     assertNonnegativeLength(
       leadingHoldLength,
       `${sceneId}.timeline.leadingHoldLength`,
-    )
-
-    const forwardExitResistance = timelineConfig.forwardExitResistance ?? 0
-    assertNonnegativeLength(
-      forwardExitResistance,
-      `${sceneId}.timeline.forwardExitResistance`,
-    )
-
-    const reverseEntryResistance = timelineConfig.reverseEntryResistance ?? 0
-    assertNonnegativeLength(
-      reverseEntryResistance,
-      `${sceneId}.timeline.reverseEntryResistance`,
     )
 
     const leadingHoldStart = cursor
@@ -224,14 +165,11 @@ export function compileSceneTimeline(registry) {
       contentLength,
       end: transitionEnd,
       exitTransitionLength,
-      forwardExitResistance,
-      freeScrollSnapRanges: Object.freeze(freeScrollSnapRanges),
       freeScroll: Boolean(timelineConfig.freeScroll),
       id: sceneId,
       index: sceneIndex,
       leadingHoldLength,
       leadingHoldStart,
-      reverseEntryResistance,
       sections: Object.freeze(sections),
       start: sceneStart,
       transitionStart,
