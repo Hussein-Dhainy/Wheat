@@ -28,6 +28,9 @@ const MAX_LINKS = 320
 // real CSS transition — see the canvas draw loop below.
 const POSITION_EASE_TAU = 0.1
 const OPACITY_EASE_TAU = 0.045
+const HOLD_RADIUS_EASE_TAU = 0.12
+const HOLD_RADIUS_SCALE = 2
+const HOLD_RADIUS_SETTLE_EPSILON = 0.002
 const SETTLE_OPACITY_EPSILON = 0.003
 const MAX_FRAME_DELTA_SECONDS = 0.1
 const OUTLINE_HIGHLIGHT_DASH_LENGTH = 48
@@ -127,6 +130,7 @@ function drawOutlineHighlights(
   centerX,
   centerY,
   elapsedSeconds,
+  radiusScale,
   unitsPerCssPixel,
   reducedMotion,
 ) {
@@ -138,7 +142,7 @@ function drawOutlineHighlights(
 
   context.save()
   context.beginPath()
-  context.arc(centerX, centerY, config.effectRadius, 0, Math.PI * 2)
+  context.arc(centerX, centerY, config.effectRadius * radiusScale, 0, Math.PI * 2)
   context.clip()
   configureContext(context, config)
   context.textAlign = textAlign
@@ -279,6 +283,10 @@ function lerpTowards(current, target, dt, tau) {
   return current + (target - current) * decay
 }
 
+function clearParticleCanvas(context, width, height, padding) {
+  context.clearRect(-padding, -padding, width + padding * 2, height + padding * 2)
+}
+
 function getReducedMotionQuery() {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return null
   return window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -291,6 +299,7 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
   fontFamily = 'Inter',
   fontSize,
   fontWeight = 400,
+  effectsEnabled = true,
   headingId,
   // When false, this instance doesn't attach its own pointer listeners —
   // a parent that wants a larger hover area (e.g. reacting to the whole
@@ -305,6 +314,8 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
   // before.
   lineHeight,
   lines,
+  introState = 'complete',
+  onIntroComplete,
   outlineColor = 'rgb(245 241 231 / 72%)',
   outlineHighlights = false,
   outlineWidth = 0,
@@ -326,6 +337,9 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
     viewBoxHeight,
     viewBoxWidth,
   })
+  const particleCanvasPadding = config.clipRadius * HOLD_RADIUS_SCALE
+  const particleCanvasWidth = viewBoxWidth + particleCanvasPadding * 2
+  const particleCanvasHeight = viewBoxHeight + particleCanvasPadding * 2
   const displayLines = useMemo(() => lines ?? [text], [lines, text])
   const resolvedLineHeight = lineHeight ?? fontSize
 
@@ -339,6 +353,8 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
   const renderState = useRef([])
   const linkOpacity = useRef([])
   const pointer = useRef({ x: config.parkedPointer, y: config.parkedPointer })
+  const radiusScale = useRef(1)
+  const targetRadiusScale = useRef(1)
   const rafId = useRef(null)
   const lastFrameTime = useRef(0)
   const reducedMotion = useRef(false)
@@ -386,6 +402,54 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
     return () => query.removeEventListener('change', updatePreference)
   }, [])
 
+  useEffect(() => {
+    if (introState !== 'playing' || !getReducedMotionQuery()?.matches) return undefined
+
+    const frameId = requestAnimationFrame(() => onIntroComplete?.())
+    return () => cancelAnimationFrame(frameId)
+  }, [introState, onIntroComplete])
+
+  useEffect(() => {
+    if (effectsEnabled) return
+
+    pointer.current.x = config.parkedPointer
+    pointer.current.y = config.parkedPointer
+    radiusScale.current = 1
+    targetRadiusScale.current = 1
+    reveal.current?.setAttribute('cx', config.parkedPointer)
+    reveal.current?.setAttribute('cy', config.parkedPointer)
+    reveal.current?.setAttribute('r', config.effectRadius)
+    outlineReveal.current?.setAttribute('cx', config.parkedPointer)
+    outlineReveal.current?.setAttribute('cy', config.parkedPointer)
+    outlineReveal.current?.setAttribute('r', config.effectRadius)
+
+    if (rafId.current) {
+      cancelAnimationFrame(rafId.current)
+      rafId.current = null
+    }
+
+    renderState.current.forEach((state, index) => {
+      const particle = particlesData.current[index]
+      state.opacity = 0
+      state.ring = null
+      if (particle) {
+        state.x = particle.x
+        state.y = particle.y
+      }
+    })
+    linkOpacity.current.fill(0)
+    const context = canvas.current?.getContext('2d')
+    if (context) {
+      clearParticleCanvas(
+        context,
+        viewBoxWidth,
+        viewBoxHeight,
+        particleCanvasPadding,
+      )
+    }
+    wrapper.current?.classList.remove(styles.spotlightActive)
+  }, [config.parkedPointer, effectsEnabled, particleCanvasPadding, viewBoxHeight, viewBoxWidth])
+
   // Resizes the canvas backing store to the element's actual on-screen
   // pixels (capped, in line with the WebGL canvas's own dpr cap) so drawing
   // stays crisp without paying for resolution nobody can see.
@@ -395,14 +459,21 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
 
     const applySize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
-      const renderedWidth = canvasElement.getBoundingClientRect().width
+      const renderedWidth = wrapper.current?.getBoundingClientRect().width ?? 0
       unitsPerCssPixel.current = renderedWidth > 0
         ? viewBoxWidth / renderedWidth
         : 1
-      canvasElement.width = Math.max(1, Math.round(viewBoxWidth * dpr))
-      canvasElement.height = Math.max(1, Math.round(viewBoxHeight * dpr))
+      canvasElement.width = Math.max(1, Math.round(particleCanvasWidth * dpr))
+      canvasElement.height = Math.max(1, Math.round(particleCanvasHeight * dpr))
       const context = canvasElement.getContext('2d')
-      context.setTransform(dpr, 0, 0, dpr, 0, 0)
+      context.setTransform(
+        dpr,
+        0,
+        0,
+        dpr,
+        particleCanvasPadding * dpr,
+        particleCanvasPadding * dpr,
+      )
       drawFrame(0)
     }
 
@@ -410,24 +481,47 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
     window.addEventListener('resize', applySize)
     return () => window.removeEventListener('resize', applySize)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewBoxWidth, viewBoxHeight])
+  }, [particleCanvasHeight, particleCanvasPadding, particleCanvasWidth, viewBoxHeight, viewBoxWidth])
 
   function drawFrame(deltaSeconds) {
     const context = canvas.current?.getContext('2d')
     if (!context) return true
 
+    if (!effectsEnabled) {
+      clearParticleCanvas(context, viewBoxWidth, viewBoxHeight, particleCanvasPadding)
+      return false
+    }
+
     const centerX = pointer.current.x
     const centerY = pointer.current.y
+    radiusScale.current = reducedMotion.current
+      ? targetRadiusScale.current
+      : lerpTowards(
+        radiusScale.current,
+        targetRadiusScale.current,
+        deltaSeconds,
+        HOLD_RADIUS_EASE_TAU,
+      )
+    if (Math.abs(radiusScale.current - targetRadiusScale.current) <= HOLD_RADIUS_SETTLE_EPSILON) {
+      radiusScale.current = targetRadiusScale.current
+    }
+    const currentRadiusScale = radiusScale.current
+    const revealRadius = config.effectRadius * currentRadiusScale
+    const radiusIsSettling = currentRadiusScale !== targetRadiusScale.current
+
+    reveal.current?.setAttribute('r', revealRadius)
+    outlineReveal.current?.setAttribute('r', revealRadius)
+
     const isWithinBounds = centerX >= 0 && centerX <= viewBoxWidth
       && centerY >= 0 && centerY <= viewBoxHeight
     const particles = particlesData.current
     const states = renderState.current
     let anyVisible = false
 
-    context.clearRect(0, 0, viewBoxWidth, viewBoxHeight)
+    clearParticleCanvas(context, viewBoxWidth, viewBoxHeight, particleCanvasPadding)
     context.save()
     context.beginPath()
-    context.arc(centerX, centerY, config.clipRadius, 0, Math.PI * 2)
+    context.arc(centerX, centerY, config.clipRadius * currentRadiusScale, 0, Math.PI * 2)
     context.clip()
 
     if (outlineHighlights && isWithinBounds) {
@@ -440,6 +534,7 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
         centerX,
         centerY,
         lastFrameTime.current / 1000,
+        currentRadiusScale,
         unitsPerCssPixel.current,
         reducedMotion.current,
       )
@@ -453,31 +548,36 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
       const deltaX = particle.x - centerX
       const deltaY = particle.y - centerY
       const distance = Math.hypot(deltaX, deltaY)
+      const activationRadius = config.activationRadius * currentRadiusScale
 
       let targetX = particle.x
       let targetY = particle.y
       let targetOpacity = 0
       let targetRing = null
 
-      if (distance < config.activationRadius) {
+      if (distance < activationRadius) {
         const fallbackAngle = particle.phase
         const baseAngle = distance > 0.001 ? Math.atan2(deltaY, deltaX) : fallbackAngle
         const angle = baseAngle + Math.sin(particle.phase) * 0.035
-        const outerRadius = config.outerRadius - particle.radius
-        const prefersOuterRing = step(config.innerCaptureRadius, distance)
+        const outerRadius = config.outerRadius * currentRadiusScale - particle.radius
+        const innerCaptureRadius = config.innerCaptureRadius
+        const ringSwitchHysteresis = config.ringSwitchHysteresis
+        const prefersOuterRing = step(innerCaptureRadius, distance)
         targetRing = prefersOuterRing ? 'outer' : 'inner'
 
-        if (renderedState.ring === 'inner' && distance < config.innerCaptureRadius + config.ringSwitchHysteresis) {
+        if (renderedState.ring === 'inner' && distance < innerCaptureRadius + ringSwitchHysteresis) {
           targetRing = 'inner'
-        } else if (renderedState.ring === 'outer' && distance > config.innerCaptureRadius - config.ringSwitchHysteresis) {
+        } else if (renderedState.ring === 'outer' && distance > innerCaptureRadius - ringSwitchHysteresis) {
           targetRing = 'outer'
         }
 
-        const targetRadius = (targetRing === 'inner' ? config.innerRadius : outerRadius)
+        const targetRadius = (targetRing === 'inner'
+          ? config.innerRadius * currentRadiusScale
+          : outerRadius)
           + particle.radialJitter
         targetX = centerX + Math.cos(angle) * targetRadius
         targetY = centerY + Math.sin(angle) * targetRadius
-        const overlap = 1 - distance / config.activationRadius
+        const overlap = 1 - distance / activationRadius
         targetOpacity = Math.min(1, 0.3 + overlap * 1.45)
       }
 
@@ -531,10 +631,12 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
       if (startVisible && endVisible) {
         const linkDistance = Math.hypot(start.x - end.x, start.y - end.y)
         const wasLinked = opacities[index] > SETTLE_OPACITY_EPSILON
-        const distanceLimit = wasLinked ? config.linkReleaseDistance : config.linkSnapDistance
+        const distanceLimit = (wasLinked ? config.linkReleaseDistance : config.linkSnapDistance)
+          * currentRadiusScale
 
         if (linkDistance <= distanceLimit) {
-          const proximity = 1 - Math.min(linkDistance, config.linkReleaseDistance) / config.linkReleaseDistance
+          const releaseDistance = config.linkReleaseDistance * currentRadiusScale
+          const proximity = 1 - Math.min(linkDistance, releaseDistance) / releaseDistance
           targetOpacity = 0.18 + proximity * 0.38
         }
       }
@@ -555,11 +657,11 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
 
     context.restore()
 
-    return isWithinBounds || anyVisible
+    return isWithinBounds || anyVisible || radiusIsSettling
   }
 
   function startLoop() {
-    if (rafId.current) return
+    if (!effectsEnabled || rafId.current) return
 
     wrapper.current?.classList.add(styles.spotlightActive)
     lastFrameTime.current = performance.now()
@@ -585,6 +687,8 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
   }
 
   const applyPointerPosition = (svgX, svgY) => {
+    if (!effectsEnabled) return
+
     pointer.current.x = svgX
     pointer.current.y = svgY
     reveal.current?.setAttribute('cx', svgX)
@@ -594,33 +698,94 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
     startLoop()
   }
 
-  const park = () => applyPointerPosition(config.parkedPointer, config.parkedPointer)
+  const setHoldActive = (active) => {
+    if (!effectsEnabled) return
 
-  const updateLocalPointer = (event) => {
-    if (!wrapper.current) return
+    targetRadiusScale.current = active ? HOLD_RADIUS_SCALE : 1
+    startLoop()
+  }
 
-    const bounds = wrapper.current.getBoundingClientRect()
+  const park = () => {
+    setHoldActive(false)
+    applyPointerPosition(config.parkedPointer, config.parkedPointer)
+  }
+
+  const updateExpandedPointer = (event) => {
+    const element = wrapper.current
+    if (!element || element.closest('[inert]')) return false
+
+    const computedStyle = window.getComputedStyle(element)
+    if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden') {
+      return false
+    }
+
+    const bounds = element.getBoundingClientRect()
+    if (bounds.width <= 0 || bounds.height <= 0) return false
+
     const svgX = ((event.clientX - bounds.left) / bounds.width) * viewBoxWidth
     const svgY = ((event.clientY - bounds.top) / bounds.height) * viewBoxHeight
     applyPointerPosition(svgX, svgY)
+    return true
   }
+
+  const handleExpandedPointerDown = (event) => {
+    if (event.button !== 0) return
+    if (updateExpandedPointer(event)) setHoldActive(true)
+  }
+
+  const handleExpandedPointerEnd = () => setHoldActive(false)
+
+  useEffect(() => {
+    if (!interactive || !effectsEnabled) return undefined
+
+    const handlePointerOut = (event) => {
+      if (event.relatedTarget === null) park()
+    }
+
+    // Listen beyond the wrapper so the circular spotlight can keep following
+    // the pointer after its centre crosses a title edge. Coordinates remain
+    // relative to this title, matching the landing page's interaction model.
+    window.addEventListener('pointercancel', handleExpandedPointerEnd)
+    window.addEventListener('pointerdown', handleExpandedPointerDown)
+    window.addEventListener('pointermove', updateExpandedPointer)
+    window.addEventListener('pointerout', handlePointerOut)
+    window.addEventListener('pointerup', handleExpandedPointerEnd)
+
+    return () => {
+      window.removeEventListener('pointercancel', handleExpandedPointerEnd)
+      window.removeEventListener('pointerdown', handleExpandedPointerDown)
+      window.removeEventListener('pointermove', updateExpandedPointer)
+      window.removeEventListener('pointerout', handlePointerOut)
+      window.removeEventListener('pointerup', handleExpandedPointerEnd)
+      handleExpandedPointerEnd()
+      park()
+    }
+  }, [effectsEnabled, interactive, viewBoxHeight, viewBoxWidth])
 
   useImperativeHandle(forwardedRef, () => ({
     applyPointerPosition,
     element: wrapper.current,
     park,
+    setHoldActive,
   }))
 
   const fillMaskId = `${uid}-fill-mask`
   const outlineMaskId = `${uid}-outline-mask`
   const textX = textAlign === 'left' ? 0 : viewBoxWidth / 2
+  const introClass = introState === 'waiting'
+    ? styles.introWaiting
+    : introState === 'playing'
+      ? styles.introPlaying
+      : styles.introComplete
+
+  const handleIntroAnimationEnd = (event) => {
+    if (event.target !== event.currentTarget || introState !== 'playing') return
+    onIntroComplete?.()
+  }
 
   return (
     <div
-      className={`${styles.interaction} ${className}`}
-      onPointerDown={interactive ? updateLocalPointer : undefined}
-      onPointerLeave={interactive ? park : undefined}
-      onPointerMove={interactive ? updateLocalPointer : undefined}
+      className={`${styles.interaction} ${introClass} ${className}`}
       ref={wrapper}
       style={style}
     >
@@ -684,6 +849,33 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
           ) : null}
         </defs>
 
+        {introState !== 'complete' ? (
+          <g
+            aria-hidden="true"
+            className={styles.introOutline}
+          >
+            <text
+              style={{
+                fontFamily: `'${fontFamily}', Inter, ui-sans-serif, system-ui, sans-serif`,
+                fontSize: `${fontSize}px`,
+                fontKerning: 'none',
+                fontWeight,
+                letterSpacing: `${letterSpacing}px`,
+              }}
+              textAnchor={textAlign === 'left' ? 'start' : 'middle'}
+              vectorEffect="non-scaling-stroke"
+              x={textX}
+              y={baseline}
+            >
+              {displayLines.map((line, index) => (
+                <tspan key={line} dy={index === 0 ? 0 : resolvedLineHeight} x={textX}>
+                  {line}
+                </tspan>
+              ))}
+            </text>
+          </g>
+        ) : null}
+
         {outlineWidth > 0 ? (
           <g
             className={styles.outline}
@@ -716,7 +908,12 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
           </g>
         ) : null}
 
-        <g className={styles.fill} mask={`url(#${fillMaskId})`} style={{ fill: textColor }}>
+        <g
+          className={styles.fill}
+          mask={`url(#${fillMaskId})`}
+          onAnimationEnd={handleIntroAnimationEnd}
+          style={{ fill: textColor }}
+        >
           <text
             style={{
               fontFamily: `'${fontFamily}', Inter, ui-sans-serif, system-ui, sans-serif`,
@@ -742,6 +939,12 @@ export const TitleParticleText = forwardRef(function TitleParticleText({
         aria-hidden="true"
         className={styles.particleCanvas}
         ref={canvas}
+        style={{
+          height: `${(particleCanvasHeight / viewBoxHeight) * 100}%`,
+          left: `${(-particleCanvasPadding / viewBoxWidth) * 100}%`,
+          top: `${(-particleCanvasPadding / viewBoxHeight) * 100}%`,
+          width: `${(particleCanvasWidth / viewBoxWidth) * 100}%`,
+        }}
       />
     </div>
   )

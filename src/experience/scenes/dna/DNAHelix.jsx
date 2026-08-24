@@ -25,7 +25,7 @@ import DNAParticleTrails from './DNAParticleTrails.jsx'
 
 const ROTATION_SPEED_RADIANS_PER_SECOND = 0.2
 const DNA_VERTICAL_TRAVEL = 7
-const DNA_SCROLL_ROTATION = Math.PI * 4
+const DNA_SCROLL_ROTATION = Math.PI * 2
 // The scene's single section is 4 scroll units long (see sceneTimeline.js);
 // keep the established DNA beat at 2 units and use the added space for seeds.
 const DISAPPEAR_FRACTION_OF_SCENE = 1 / 2
@@ -71,11 +71,7 @@ export default function DNAHelix({
   const haloMaterialReference = useRef()
   const ribbonMaterialReference = useRef()
   const particleMaterialReference = useRef()
-  const entryElapsed = useRef(0)
   const entryParticleFlow = useRef(0)
-  const entryHasStarted = useRef(false)
-  const entryIsSettled = useRef(false)
-  const reverseExitActive = useRef(false)
   const scrollRotationProgress = useRef(0)
   const idleRotation = useRef(0)
   const renderResolution = useRef(new Vector2(1, 1))
@@ -221,17 +217,8 @@ export default function DNAHelix({
     const sceneState = sceneStateRef?.current
     if (!dnaReference.current || !sceneState) return
 
-    const entryDuration = Math.max(
-      DNA_RENDER_CONFIG.entry.fadeDurationSeconds,
-      DNA_RENDER_CONFIG.entry.rotationDurationSeconds,
-    )
-
     if (!sceneState.isActive) {
-      entryElapsed.current = 0
       entryParticleFlow.current = 0
-      entryHasStarted.current = false
-      entryIsSettled.current = false
-      reverseExitActive.current = false
       scrollRotationProgress.current = 0
       if (haloMaterialReference.current) {
         haloMaterialReference.current.uniforms.uSceneOpacity.value = 0
@@ -261,65 +248,37 @@ export default function DNAHelix({
       1,
       Math.max(0, sceneState.visibility ?? 0),
     )
-    const entryIsVisible = sceneVisibility > 0.0001
-    const isReverseExit = sceneState.direction < 0 && sceneState.isLeaving
+    // The Scene 1/2 handoff owns the entry twist. Once genetics content has
+    // begun (or Scene 2 is re-entering from Scene 3), the twist stays fully
+    // settled. This single scroll-derived value is exactly reversible.
+    const entryTransitionProgress = sceneProgress > 0
+      ? 1
+      : sceneVisibility
 
-    if (isReverseExit) {
-      if (!reverseExitActive.current) {
-        // The hold/catch-up clock may be well beyond the visual reveal. Clamp
-        // it to the reveal duration so opacity and rotation reverse at once.
-        entryElapsed.current = Math.min(entryElapsed.current, entryDuration)
-        reverseExitActive.current = true
-      }
-      entryElapsed.current = Math.max(0, entryElapsed.current - deltaTime)
-    } else if (!entryIsVisible) {
-      entryElapsed.current = 0
-      entryHasStarted.current = false
-      entryIsSettled.current = false
-      reverseExitActive.current = false
-    } else if (!entryHasStarted.current) {
-      // Scene 2 can become active at either boundary. Only entering from
-      // Scene 1 should play the authored reveal/twist. When returning from
-      // Scene 3, initialize that local animation at its completed state so
-      // the DNA remains at the scroll-authored end of the scene.
-      const isEnteringFromSceneEnd = (
-        sceneState.direction < 0
-        && sceneState.isEntering
-        && sceneProgress > 0.5
-      )
-      entryElapsed.current = isEnteringFromSceneEnd
-        ? entryDuration
-        : sceneVisibility * entryDuration
-      entryHasStarted.current = true
-      entryIsSettled.current = isEnteringFromSceneEnd
-      reverseExitActive.current = false
-    } else if (!entryIsSettled.current) {
-      // Tracks the diagonal transition's own visibility directly instead of
-      // a fixed real-time clock, so the reveal and rotation-settle below
-      // track actual scroll progress with zero added lag — visible and
-      // rotating from the very first frame of the transition, not after a
-      // separate fade-in timer catches up.
-      entryElapsed.current = sceneVisibility * entryDuration
-      reverseExitActive.current = false
-    }
-
-    const entryRevealProgress = MathUtils.smootherstep(
-      MathUtils.clamp(
-        entryElapsed.current
-          / Math.max(0.001, DNA_RENDER_CONFIG.entry.fadeDurationSeconds),
-        0,
-        1,
-      ),
+    const transitionRevealProgress = MathUtils.lerp(
+      DNA_RENDER_CONFIG.entry.minimumRevealProgress,
+      DNA_RENDER_CONFIG.entry.transitionRevealProgress,
+      // Keep the sweep directly tied to scroll. The shader already softens
+      // its moving edge; easing here as well delayed the visible onset and
+      // compressed too much of the downward growth into the middle.
+      entryTransitionProgress,
+    )
+    const revealCompletionProgress = MathUtils.clamp(
+      sceneProgress
+        / Math.max(
+          0.001,
+          DNA_RENDER_CONFIG.entry.revealCompletionSceneProgress,
+        ),
       0,
       1,
     )
+    const entryRevealProgress = MathUtils.lerp(
+      transitionRevealProgress,
+      1,
+      revealCompletionProgress,
+    )
     const entrySettleProgress = MathUtils.smootherstep(
-      MathUtils.clamp(
-        entryElapsed.current
-          / Math.max(0.001, DNA_RENDER_CONFIG.entry.rotationDurationSeconds),
-        0,
-        1,
-      ),
+      entryTransitionProgress,
       0,
       1,
     )

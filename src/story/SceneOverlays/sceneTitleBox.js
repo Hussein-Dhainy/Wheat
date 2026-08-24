@@ -33,7 +33,7 @@ function measureTextWidth(text, fontSize, fontWeight, letterSpacing) {
   return glyphWidth + spacingWidth
 }
 
-function computeBoldTitleBox(lines) {
+export function computeBoldTitleBox(lines) {
   const lineWidths = lines.map((line) => measureTextWidth(
     line,
     BOLD_TITLE_FONT_SIZE,

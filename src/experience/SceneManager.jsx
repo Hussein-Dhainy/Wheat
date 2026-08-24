@@ -69,6 +69,7 @@ export function SceneManager({
     announcer: null,
     announcementKey: '',
     dominantIndex: -1,
+    layerVisibilityActive: [],
     layers: [],
     pairKey: '',
     root: null,

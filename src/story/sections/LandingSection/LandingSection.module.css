@@ -19,14 +19,10 @@
   position: relative;
   display: block;
   width: 100%;
+  opacity: var(--scene-visibility, 1);
   user-select: none;
   -webkit-user-select: none;
-}
-
-.titleGraphicWrapper svg {
-  /* Starting state for the intro's left-to-right wipe reveal. */
-  clip-path: inset(0 100% 0 0);
-  opacity: 0;
+  will-change: opacity;
 }
 
 .body {
@@ -57,10 +53,6 @@
   text-transform: uppercase;
   opacity: 0;
   transform: translateX(-0.75rem);
-}
-
-.entered .titleGraphicWrapper svg {
-  animation: title-reveal-left-to-right var(--title-reveal-duration) cubic-bezier(0.16, 1, 0.3, 1) var(--title-reveal-delay) forwards;
 }
 
 .entered .body {
@@ -98,22 +90,6 @@
   }
 }
 
-@keyframes title-reveal-left-to-right {
-  from {
-    clip-path: inset(0 100% 0 0);
-    opacity: 0;
-  }
-
-  18% {
-    opacity: 1;
-  }
-
-  to {
-    clip-path: inset(0 0 0 0);
-    opacity: 1;
-  }
-}
-
 @keyframes supporting-content-reveal {
   to {
     opacity: 1;
@@ -145,7 +121,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .entered .titleGraphicWrapper svg,
   .entered .body,
   .entered .hint {
     animation: none;

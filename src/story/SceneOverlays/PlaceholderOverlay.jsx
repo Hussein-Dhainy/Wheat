@@ -3,6 +3,7 @@ import {
   GENETICS_SEED_OPTIONS,
 } from '../../config/geneticsSeeds.js'
 import { TitleParticleText } from '../components/TitleParticleText/TitleParticleText.jsx'
+import { FieldIntro } from './FieldIntro.jsx'
 import { PredictionIntro } from './PredictionIntro.jsx'
 import { ResultExperience } from './ResultExperience.jsx'
 import {
@@ -69,7 +70,7 @@ export function PlaceholderOverlay({
       aria-hidden={fallback ? false : sectionIndex !== 0}
       inert={fallback ? false : sectionIndex !== 0}
     >
-      {entry.id !== 'genetics' && !hidesPlaceholderContent && (
+      {entry.id !== 'genetics' && entry.id !== 'field' && !hidesPlaceholderContent && (
         <>
           <div className={styles.copy}>
             <p className={styles.eyebrow}>
@@ -100,6 +101,18 @@ export function PlaceholderOverlay({
         </>
       )}
 
+      {entry.id === 'field' && (
+        <>
+          <FieldIntro
+            description={description}
+            fallback={fallback}
+            title={label}
+            titleId={titleId}
+          />
+          <p className={styles.hint}>Scroll · Swipe · Arrow keys</p>
+        </>
+      )}
+
       {entry.id === 'genetics' && (
         <div className={styles.seedSelector}>
           <div className={styles.seedCopy}>
@@ -126,6 +139,7 @@ export function PlaceholderOverlay({
 
       {entry.id === 'prediction' && (
         <PredictionIntro
+          fallback={fallback}
           predictionTestsOpen={predictionTestsOpen}
           selectedPredictionCondition={selectedPredictionCondition}
           setPredictionTestsOpen={setPredictionTestsOpen}
@@ -135,6 +149,7 @@ export function PlaceholderOverlay({
 
       {entry.id === 'result' && (
         <ResultExperience
+          fallback={fallback}
           resultInspectionOpen={resultInspectionOpen}
           resultInteractionRef={resultInteractionRef}
           selectedResultClosingAction={selectedResultClosingAction}

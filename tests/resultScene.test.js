@@ -1,11 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { MeshPhysicalMaterial } from 'three'
 
 import { RESULT_CONTENT } from '../src/config/resultContent.js'
 import { SCENE_TIMELINE } from '../src/config/sceneTimeline.js'
 import { RESULT_SCENE_CONFIG } from '../src/experience/scenes/result/resultConfig.js'
 import {
   createNetworkData,
+  prepareMaterial,
   smootherRange,
 } from '../src/experience/scenes/result/resultGeometry.js'
 import {
@@ -44,6 +46,33 @@ test('the result uses the Hunyon wheat seed model', () => {
   )
   assert.equal(RESULT_SCENE_CONFIG.meshName, 'node_0')
   assert.equal(RESULT_SCENE_CONFIG.materialSourceMeshName, 'node_0')
+})
+
+test('the result grain overrides imported shine with a matte organic material', () => {
+  const source = new MeshPhysicalMaterial({
+    clearcoat: 1,
+    metalness: 0.8,
+    roughness: 0.2,
+    sheen: 1,
+    specularIntensity: 1,
+  })
+  source.metalnessMap = {}
+  source.roughnessMap = {}
+
+  const material = prepareMaterial({ material: source })
+
+  assert.equal(material.metalness, 0)
+  assert.equal(material.metalnessMap, null)
+  assert.equal(material.roughness, 1)
+  assert.equal(material.roughnessMap, null)
+  assert.equal(material.specularIntensity, 0.15)
+  assert.equal(material.clearcoat, 0)
+  assert.equal(material.sheen, 0)
+  assert.equal(material.normalScale.x, 0.25)
+  assert.equal(material.normalScale.y, 0.25)
+
+  material.dispose()
+  source.dispose()
 })
 
 test('grain inspection exposes three content-driven views', () => {

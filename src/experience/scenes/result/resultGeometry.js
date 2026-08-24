@@ -44,14 +44,22 @@ export function prepareMaterial(node) {
   material.color.multiply(new Color(CONFIG.material.colorTint))
   material.emissive.set(CONFIG.material.emissive)
   material.emissiveIntensity = CONFIG.material.emissiveIntensity
-  material.metalness = 0
+  material.metalness = CONFIG.material.metalness
+  material.metalnessMap = null
   material.roughness = CONFIG.material.roughness
+  material.roughnessMap = null
   material.normalScale = new Vector2(
     CONFIG.material.normalScale,
     CONFIG.material.normalScale,
   )
+  if ('specularIntensity' in material) {
+    material.specularIntensity = CONFIG.material.specularIntensity
+  }
+  if ('clearcoat' in material) material.clearcoat = CONFIG.material.clearcoat
+  if ('sheen' in material) material.sheen = CONFIG.material.sheen
   material.side = DoubleSide
   material.transparent = true
+  material.needsUpdate = true
   return material
 }
 

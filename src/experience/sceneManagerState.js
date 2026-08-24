@@ -13,7 +13,10 @@ export const DIAGONAL_TRANSITION = {
 }
 
 const OVERLAY_DOMINANCE_HYSTERESIS = 0.04
+const SCENE_VISIBILITY_ENTER_THRESHOLD = 0.015
+const SCENE_VISIBILITY_EXIT_THRESHOLD = 0.001
 export const MINIMUM_TRANSITION_PROGRESS = 1e-6
+export const SCENE_VISIBILITY_ENTER_EVENT = 'wheat:scene-visibility-enter'
 
 export function createRenderTarget(name) {
   const target = new WebGLRenderTarget(1, 1, {
@@ -123,6 +126,7 @@ function getOverlayLayers(root, cache) {
   if (cache.root !== root) {
     cache.root = root
     cache.layers = [...root.querySelectorAll('[data-scene-layer]')]
+    cache.layerVisibilityActive = cache.layers.map(() => undefined)
     cache.sections = cache.layers.map((layer) => (
       [...layer.querySelectorAll('[data-scene-section]')]
     ))
@@ -134,6 +138,29 @@ function getOverlayLayers(root, cache) {
   }
 
   return cache.layers
+}
+
+function updateOverlayLayerVisibility(cache, layer, index, visibility) {
+  const wasVisible = cache.layerVisibilityActive[index]
+
+  layer.style.setProperty('--scene-visibility', visibility)
+
+  if (visibility <= SCENE_VISIBILITY_EXIT_THRESHOLD) {
+    cache.layerVisibilityActive[index] = false
+    return
+  }
+
+  if (visibility < SCENE_VISIBILITY_ENTER_THRESHOLD) return
+
+  cache.layerVisibilityActive[index] = true
+  if (wasVisible !== false) return
+
+  layer.dispatchEvent(new CustomEvent(SCENE_VISIBILITY_ENTER_EVENT, {
+    detail: {
+      sceneId: layer.dataset.sceneId,
+      sceneIndex: index,
+    },
+  }))
 }
 
 function updateOverlaySection(cache, sceneIndex, requestedSectionIndex) {
@@ -175,7 +202,10 @@ export function updateOverlayLayers(root, cache, transition) {
           && index === transition.nextIndex
         )
       layer.style.visibility = participates ? 'visible' : 'hidden'
-      if (!participates) layer.style.clipPath = 'inset(100%)'
+      if (!participates) {
+        layer.style.clipPath = 'inset(100%)'
+        updateOverlayLayerVisibility(cache, layer, index, 0)
+      }
     })
     cache.pairKey = pairKey
   }
@@ -217,6 +247,12 @@ export function updateOverlayLayers(root, cache, transition) {
   currentLayer.dataset.sectionIndex = String(currentSectionIndex)
   currentLayer.dataset.sectionProgress = transition.sectionProgress.toFixed(4)
   currentLayer.style.setProperty('--scene-progress', transition.sceneProgress)
+  updateOverlayLayerVisibility(
+    cache,
+    currentLayer,
+    transition.currentIndex,
+    1 - transition.progress,
+  )
   currentLayer.style.setProperty('--section-progress', transition.sectionProgress)
   currentLayer.style.setProperty(
     '--transition-motion-y',
@@ -229,6 +265,12 @@ export function updateOverlayLayers(root, cache, transition) {
   nextLayer.dataset.sceneContentProgress = '0.0000'
   nextLayer.dataset.transitionMotionOffset = nextMotionOffset.toFixed(4)
   nextLayer.style.setProperty('--scene-progress', 0)
+  updateOverlayLayerVisibility(
+    cache,
+    nextLayer,
+    transition.nextIndex,
+    transition.progress,
+  )
   nextLayer.style.setProperty('--section-progress', 0)
   nextLayer.style.setProperty(
     '--transition-motion-y',

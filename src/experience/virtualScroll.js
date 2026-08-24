@@ -13,9 +13,12 @@ export const VIRTUAL_SCROLL = {
   // for longer after each wheel tick instead of settling almost instantly.
   damping: 2,
   freeScrollKeyboardStep: 0.5,
+  // Slow only the displayed diagonal wipe. Its timeline length stays fixed,
+  // so wheel and touch still require the same amount of input as before.
+  transitionDamping: 1.25,
   // Direct input stays fully continuous inside scenes. If wheel input stops
   // inside a diagonal wipe, settle to one of its fully visible endpoints.
-  transitionSettleDamping: 6.5,
+  transitionSettleDamping: 1.8,
   transitionSettleDelaySeconds: 0.14,
   touchScreensPerViewport: 1.15,
   wheelPixelLimit: 100,
@@ -347,8 +350,14 @@ export function advanceVirtualScroll(
     state.current = state.target
     state.isSnapping = false
   } else {
+    const timelinePosition = state.timeline.scenes.length > 0
+      ? resolveSceneTimeline(state.current, state.timeline)
+      : null
+    const effectiveDamping = timelinePosition?.phase === 'transition'
+      ? Math.min(damping, VIRTUAL_SCROLL.transitionDamping)
+      : damping
     const frameDelta = Math.max(0, Math.min(deltaSeconds, 0.1))
-    const amount = 1 - Math.exp(-damping * frameDelta)
+    const amount = 1 - Math.exp(-effectiveDamping * frameDelta)
     state.current += (state.target - state.current) * amount
 
     if (Math.abs(state.target - state.current) < 1e-7) {

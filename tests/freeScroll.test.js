@@ -21,7 +21,7 @@ function createStateAt(position) {
   return state
 }
 
-function settle(state, frameCount = 600, frameDelta = 1 / 60) {
+function settle(state, frameCount = 900, frameDelta = 1 / 60) {
   for (let frame = 0; frame < frameCount; frame += 1) {
     advanceVirtualScroll(state, frameDelta)
   }

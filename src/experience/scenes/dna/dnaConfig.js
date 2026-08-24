@@ -1,10 +1,13 @@
 export const DNA_RENDER_CONFIG = {
   transitionTravel: 1.4,
   entry: {
-    // Durations are real seconds and apply in both directions: Scene 2 fades
-    // and rotates in on entry, then runs the same animation backward on exit.
-    fadeDurationSeconds: 1,
-    rotationDurationSeconds: 1,
+    // Keep part of the helix visible from its first active frame so it reads
+    // as entering with the scene instead of appearing after the wipe begins.
+    minimumRevealProgress: 0.3,
+    // The diagonal entry reveals only this much. The remaining portion grows
+    // through the opening part of the genetics scene's existing scroll span.
+    transitionRevealProgress: 0.65,
+    revealCompletionSceneProgress: 0.2,
     // Width of the soft leading edge along the DNA's normalized height.
     // Smaller values create a sharper top-to-bottom reveal line.
     revealSoftness: 0.54,

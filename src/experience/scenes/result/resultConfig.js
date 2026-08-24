@@ -54,16 +54,18 @@ export const RESULT_SCENE_CONFIG = {
     },
   },
   material: {
-    colorTint: '#dad36c',
+    colorTint: '#eee5ad',
     emissive: '#554414',
     emissiveIntensity: 0.12,
-    // Higher roughness broadens the specular response so the key light
-    // reads as a soft sheen instead of a sharp glint, and a lower
-    // normalScale keeps fine surface bumps from flecking that sheen with
-    // little sparkles — both matched against the reference photo, which
-    // has no hard highlight anywhere on the grain.
-    roughness: 0.96,
-    normalScale: 0.4,
+    // The source GLB carries an unusually strong specular extension and a
+    // combined metallic/roughness map. Override both so the grain reads as a
+    // dry organic surface rather than polished or metallic material.
+    metalness: 0,
+    roughness: 1,
+    specularIntensity: 0.15,
+    clearcoat: 0,
+    sheen: 0,
+    normalScale: 0.25,
   },
   atmosphere: {
     orangeFadeRange: [0.18, 0.82],

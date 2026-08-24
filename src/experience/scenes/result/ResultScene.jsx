@@ -408,7 +408,7 @@ export function ResultScene({
     <>
       <color attach="background" args={[CONFIG.background]} />
 
-      <mesh position={[0, 0, -4.5]} scale={[30, 18, 1]} renderOrder={-10}>
+      <mesh position={[0, 0, -4.5]} scale={[60, 36, 1]} renderOrder={-10}>
         <planeGeometry args={[1, 1]} />
         <shaderMaterial
           ref={backdropMaterialRef}
@@ -458,12 +458,11 @@ export function ResultScene({
         />
       </mesh>
 
-      {/* A warm studio key shapes the grain while pale blue and orange lights
-          sit far behind either side. Their shallow side angles keep the color
-          on the grazing silhouettes instead of washing across the front. */}
+      {/* A warm camera-side key lifts the matte grain through diffuse light,
+          while pale blue and orange rear lights stay on its silhouettes. */}
       <hemisphereLight args={['#f2e2a8', '#052a20', 0.68]} />
-      <directionalLight color="#ffd897" intensity={1.05} position={[4.2, 3.4, -4]} />
-      <directionalLight color="#b0dced" intensity={1.6} position={[-3, 0.2, -4]} />
+      <directionalLight color="#ffd897" intensity={1.15} position={[4.2, 3.4, 4]} />
+      <directionalLight color="#b0dced" intensity={1.85} position={[-3, 0.2, -4]} />
       <directionalLight color="#efc499" intensity={1.6} position={[4.5, -0.2, -2]} />
 
       <group ref={grainGroupRef}>

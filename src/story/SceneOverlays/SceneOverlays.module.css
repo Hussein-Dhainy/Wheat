@@ -265,7 +265,7 @@
   position: absolute;
   top: 50%;
   left: clamp(1.75rem, 7.8vw, 9.5rem);
-  width: min(46rem, 50vw);
+  width: min(52rem, 56vw);
   transform: translateY(-50%);
 }
 
@@ -289,28 +289,97 @@
    text wraps naturally where it visually should. */
 .predictionTitleLines {
   display: block;
-  width: min(42rem, 45vw);
+  width: min(48rem, 51vw);
   margin-bottom: 0.5rem;
+  opacity: var(--scene-visibility, 1);
+  pointer-events: auto;
+  will-change: opacity;
 }
 
 .fieldTitleLines {
   display: block;
-  width: min(46rem, 43vw);
+  width: min(64rem, 60vw);
   margin-bottom: 0.5rem;
+  pointer-events: auto;
+}
+
+.fieldSubtitle {
+  opacity: var(--scene-visibility, 1);
+  will-change: opacity;
+}
+
+.fieldSubtitle span {
+  display: block;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.copy[data-field-intro-state='waiting'] .fieldSubtitle span {
+  clip-path: inset(0 100% 0 0);
+  opacity: 0;
+  transform: translateX(-0.75rem);
+}
+
+.copy:not([data-field-intro-state='waiting']) .fieldSubtitle span {
+  animation: field-subtitle-reveal 800ms cubic-bezier(0.22, 0.72, 0.2, 1) 1450ms both;
 }
 
 .resultTitleLines {
   display: block;
   width: min(40rem, 41vw);
   margin-bottom: 0.5rem;
+  pointer-events: auto;
+}
+
+.resultIntroEyebrow span,
+.resultSubtitle span {
+  display: block;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.resultCopy[data-result-intro-state='waiting'] .resultIntroEyebrow span,
+.resultCopy[data-result-intro-state='waiting'] .resultSubtitle span {
+  clip-path: inset(0 100% 0 0);
+  opacity: 0;
+  transform: translateX(-0.75rem);
+}
+
+.resultCopy:not([data-result-intro-state='waiting']) .resultIntroEyebrow span {
+  animation: result-supporting-copy-reveal 700ms cubic-bezier(0.22, 0.72, 0.2, 1) 1350ms both;
+}
+
+.resultCopy:not([data-result-intro-state='waiting']) .resultSubtitle span {
+  animation: result-supporting-copy-reveal 800ms cubic-bezier(0.22, 0.72, 0.2, 1) 1450ms both;
 }
 
 .predictionCopy p {
-  max-width: 35rem;
+  max-width: 39rem;
   margin: clamp(1.3rem, 2.2vw, 2rem) 0 0;
   color: rgb(255 255 255 / 76%);
-  font-size: clamp(0.92rem, 1.18vw, 1.08rem);
+  font-size: clamp(1.04rem, 1.32vw, 1.22rem);
   line-height: 1.65;
+}
+
+.predictionSubtitle {
+  opacity: var(--scene-visibility, 1);
+  will-change: opacity;
+}
+
+.predictionSubtitle span {
+  display: block;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.predictionExperience[data-intro-state='waiting'] .predictionSubtitle span {
+  clip-path: inset(0 100% 0 0);
+  opacity: 0;
+  transform: translateX(-0.75rem);
+}
+
+.predictionExperience:not([data-intro-state='waiting']) .predictionSubtitle span {
+  animation: prediction-subtitle-reveal 800ms cubic-bezier(0.22, 0.72, 0.2, 1) 1450ms both;
 }
 
 .testActionOrbit {
@@ -320,38 +389,81 @@
   display: grid;
   width: clamp(8.75rem, 11vw, 11.5rem);
   aspect-ratio: 1;
-  cursor: pointer;
+  opacity: var(--scene-visibility, 1);
   place-items: center;
-  pointer-events: auto;
+  pointer-events: none;
   transition: transform 260ms ease;
+  will-change: opacity;
 }
 
-.testActionOrbit::before {
+.predictionExperience[data-controls-ready='true'] .testActionOrbit {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.testActionRings {
   position: absolute;
-  inset: -0.75rem;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    transparent 205deg,
-    rgb(255 255 255 / 5%) 235deg,
-    rgb(255 255 255 / 35%) 285deg,
-    rgb(255 255 255 / 95%) 350deg,
-    transparent 360deg
-  );
-  border-radius: 50%;
-  content: '';
-  mask: radial-gradient(
-    farthest-side,
-    transparent calc(100% - 1.5px),
-    #000 calc(100% - 1.25px)
-  );
-  -webkit-mask: radial-gradient(
-    farthest-side,
-    transparent calc(100% - 1.5px),
-    #000 calc(100% - 1.25px)
-  );
-  animation: prediction-ring-orbit 4.6s linear infinite;
+  inset: -0.8rem;
+  z-index: 2;
+  width: calc(100% + 1.6rem);
+  height: calc(100% + 1.6rem);
+  overflow: visible;
   pointer-events: none;
+  transform: rotate(-90deg);
+}
+
+.testActionInnerRing,
+.testActionOuterRing {
+  fill: none;
+  stroke-dasharray: none;
+  stroke-linecap: butt;
+  vector-effect: non-scaling-stroke;
+}
+
+.testActionInnerRing {
+  stroke: rgb(255 255 255 / 78%);
+}
+
+.testActionOuterRing {
+  stroke: rgb(255 255 255 / 34%);
+}
+
+.testActionOrbitHighlight {
+  fill: none;
+  opacity: 0;
+  stroke: rgb(255 255 255 / 92%);
+  stroke-dasharray: 0.22 0.78;
+  stroke-dashoffset: 0;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.predictionExperience[data-controls-ready='true'] .testActionOrbitHighlight {
+  opacity: 1;
+  animation: prediction-svg-ring-orbit 4.6s linear infinite;
+}
+
+.predictionExperience[data-intro-state='waiting'] .testActionInnerRing {
+  stroke-dasharray: 0 1;
+}
+
+.predictionExperience[data-intro-state='waiting'] .testActionOuterRing {
+  stroke-dasharray: 0 1;
+}
+
+.predictionExperience:not([data-intro-state='waiting']) .testActionInnerRing {
+  animation: prediction-inner-ring-draw 700ms cubic-bezier(0.35, 0, 0.2, 1) 1800ms both;
+}
+
+.predictionExperience:not([data-intro-state='waiting']) .testActionOuterRing {
+  animation: prediction-outer-ring-draw 900ms cubic-bezier(0.35, 0, 0.2, 1) 1950ms both;
+}
+
+.predictionExperience[data-controls-ready='true'] .testActionInnerRing,
+.predictionExperience[data-controls-ready='true'] .testActionOuterRing {
+  animation: none;
+  stroke-dasharray: none;
+  stroke-dashoffset: 0;
 }
 
 .testActionOrbit:hover,
@@ -360,6 +472,8 @@
 }
 
 .testAction {
+  position: relative;
+  z-index: 1;
   display: grid;
   width: 100%;
   aspect-ratio: 1;
@@ -372,14 +486,31 @@
   line-height: 1.2;
   text-transform: uppercase;
   background: rgb(150 154 143 / 15%);
-  border: 1px solid rgb(255 255 255 / 78%);
+  border: 0;
   border-radius: 50%;
   cursor: pointer;
   place-items: center;
   backdrop-filter: blur(3px);
+  opacity: 1;
+  transform: scale(1);
+}
+
+.predictionExperience[data-intro-state='waiting'] .testAction {
+  opacity: 0;
+  transform: scale(0.88);
+}
+
+.predictionExperience:not([data-intro-state='waiting']) .testAction {
+  animation: prediction-test-action-reveal 400ms cubic-bezier(0.2, 0.72, 0.2, 1) 2350ms both;
+}
+
+.testAction:disabled {
+  cursor: default;
 }
 
 .testAction span {
+  position: relative;
+  z-index: 4;
   width: calc(100% - 1.25rem);
   text-align: center;
 }
@@ -387,6 +518,96 @@
 .testAction:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 0.45rem;
+}
+
+@keyframes prediction-subtitle-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0;
+    transform: translateX(-0.75rem);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes field-subtitle-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0;
+    transform: translateX(-0.75rem);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes result-supporting-copy-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0;
+    transform: translateX(-0.75rem);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes prediction-inner-ring-draw {
+  from { stroke-dasharray: 0 1; }
+  to { stroke-dasharray: 1 0; }
+}
+
+@keyframes prediction-outer-ring-draw {
+  from { stroke-dasharray: 0 1; }
+  to { stroke-dasharray: 1 0; }
+}
+
+@keyframes prediction-svg-ring-orbit {
+  to { stroke-dashoffset: -1; }
+}
+
+@keyframes prediction-test-action-reveal {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes result-inner-ring-undraw {
+  from { stroke-dasharray: 1 0; }
+  to { stroke-dasharray: 0 1; }
+}
+
+@keyframes result-outer-ring-undraw {
+  from { stroke-dasharray: 1 0; }
+  to { stroke-dasharray: 0 1; }
+}
+
+@keyframes result-action-hide {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(0.88);
+  }
 }
 
 .predictionTests {
@@ -418,11 +639,74 @@
   aspect-ratio: 1;
   padding: 0;
   background: rgb(150 154 143 / 10%);
-  border: 1px solid rgb(255 255 255 / 48%);
+  border: 0;
   border-radius: 50%;
   cursor: pointer;
   pointer-events: auto;
-  transition: background-color 220ms ease, border-color 220ms ease, transform 220ms ease;
+  transition: none;
+}
+
+.testsExit:disabled {
+  cursor: default;
+}
+
+.testsExitRing {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  transform: rotate(-90deg);
+}
+
+.testsExitRing circle {
+  fill: none;
+  stroke: rgb(255 255 255 / 48%);
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.predictionTests[data-exit-state='waiting'] .testsExitRing circle {
+  opacity: 0;
+  stroke-dasharray: 0 1;
+}
+
+.predictionTests[data-exit-state='playing'] .testsExitRing circle {
+  animation: prediction-exit-ring-build 860ms cubic-bezier(0.35, 0, 0.2, 1) 360ms both;
+}
+
+.predictionTests[data-exit-state='complete'] .testsExitRing circle {
+  opacity: 1;
+  stroke-dasharray: none;
+}
+
+.predictionTests[data-exit-state='exiting'] .testsExitRing circle {
+  animation: prediction-exit-ring-unbuild 620ms cubic-bezier(0.4, 0, 0.65, 1) both;
+}
+
+.testsExit > span {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.predictionTests[data-exit-state='waiting'] .testsExit > span {
+  opacity: 0;
+  transform: rotate(-150deg) scale(0.55);
+}
+
+.predictionTests[data-exit-state='playing'] .testsExit > span {
+  animation: prediction-exit-mark-build 620ms cubic-bezier(0.2, 0.72, 0.2, 1) 600ms both;
+}
+
+.predictionTests[data-exit-state='complete'] .testsExit > span {
+  opacity: 1;
+  transform: rotate(0) scale(1);
+}
+
+.predictionTests[data-exit-state='exiting'] .testsExit > span {
+  animation: prediction-exit-mark-unbuild 460ms cubic-bezier(0.4, 0, 0.65, 1) both;
 }
 
 .testsExit span::before,
@@ -444,17 +728,15 @@
   transform: translate(-50%, -50%) rotate(-45deg);
 }
 
-.testsExit:hover,
+
 .testsExit:focus-visible {
-  background: rgb(255 255 255 / 12%);
-  border-color: rgb(255 255 255 / 88%);
-  transform: scale(1.08);
+  outline: 1px solid rgb(255 255 255 / 58%);
+  outline-offset: 0.2rem;
 }
 
-.testsExit:focus-visible,
 .conditionOptions button:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 0.3rem;
+  outline: 1px solid rgb(255 255 255 / 45%);
+  outline-offset: 0.2rem;
 }
 
 .conditionPanel {
@@ -489,6 +771,12 @@
   text-wrap: balance;
 }
 
+.conditionSelectionTitle {
+  display: block;
+  width: min(47rem, 48vw);
+  pointer-events: auto;
+}
+
 .conditionCopy > p:last-child {
   max-width: 34rem;
   margin: clamp(1.15rem, 2vw, 1.75rem) 0 0;
@@ -497,17 +785,34 @@
   line-height: 1.62;
 }
 
+.conditionBody span {
+  display: block;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.conditionCopy[data-intro-state='waiting'] .conditionBody span {
+  clip-path: inset(0 100% 0 0);
+  opacity: 0;
+  transform: translateX(-0.75rem);
+}
+
+.conditionCopy:not([data-intro-state='waiting']) .conditionBody span {
+  animation: prediction-subtitle-reveal 800ms cubic-bezier(0.22, 0.72, 0.2, 1) 1550ms both;
+}
+
 .conditionOptions {
   position: absolute;
-  bottom: clamp(2.5rem, 7vh, 5.5rem);
+  bottom: clamp(4.25rem, 9vh, 7rem);
   left: clamp(1.75rem, 7.8vw, 9.5rem);
   display: flex;
   gap: clamp(0.65rem, 1.15vw, 1.2rem);
 }
 
 .conditionOptions button {
+  position: relative;
   display: grid;
-  width: clamp(4.9rem, 6.1vw, 6.5rem);
+  width: clamp(5.7rem, 7vw, 7.5rem);
   aspect-ratio: 1;
   padding: 0.6rem;
   color: rgb(255 255 255 / 58%);
@@ -524,25 +829,552 @@
   cursor: pointer;
   place-items: center;
   pointer-events: auto;
-  transition:
-    color 220ms ease,
-    background-color 220ms ease,
-    border-color 220ms ease,
-    transform 220ms ease;
+  transition: none;
 }
 
-.conditionOptions button:hover,
-.conditionOptions button:focus-visible {
-  color: #fff;
-  border-color: rgb(255 255 255 / 72%);
-  transform: scale(1.06);
+.conditionOptions button > span {
+  position: relative;
+  z-index: 1;
+  display: block;
 }
 
-.conditionOptions button[aria-pressed='true'] {
-  color: #fff;
-  background: rgb(255 255 255 / 16%);
-  border-color: #fff;
+.conditionOptions button > .conditionLabel {
+  position: absolute;
+  top: calc(100% + 0.6rem);
+  left: 50%;
+  z-index: 2;
+  color: rgb(255 255 255 / 84%);
+  font-size: clamp(0.54rem, 0.62vw, 0.68rem);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 0.65rem);
+  transition: opacity 280ms ease, transform 320ms cubic-bezier(0.2, 0.72, 0.2, 1);
+  white-space: nowrap;
 }
+
+.conditionOptions button:hover > .conditionLabel,
+.conditionOptions button:focus-visible > .conditionLabel,
+.conditionOptions button[aria-pressed='true'] > .conditionLabel {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.conditionOptions button > .conditionWindIcon {
+  position: absolute;
+  z-index: 0;
+  width: 55%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  color: rgb(225 241 239 / 72%);
+  border: 3px solid rgb(225 241 239 / 28%);
+  border-radius: 50%;
+  opacity: 0.62;
+  pointer-events: none;
+  transition: border-color 220ms ease, color 220ms ease, opacity 220ms ease;
+}
+
+.conditionWindIcon i {
+  --wind-pattern: 2.75rem;
+  --wind-travel: -2.75rem;
+  --wind-duration: 3.2s;
+  --wind-line-thickness: clamp(3px, 0.24vw, 4px);
+
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: var(--wind-line-thickness);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0 6%,
+    currentColor 6% 68%,
+    transparent 68% 100%
+  );
+  background-repeat: repeat-x;
+  background-position: 0 50%;
+  background-size: var(--wind-pattern) var(--wind-line-thickness);
+  animation: prediction-condition-wind-line var(--wind-duration) linear infinite;
+  animation-play-state: paused;
+}
+
+.conditionWindIcon i:nth-child(1) {
+  --wind-pattern: 2.5rem;
+  --wind-travel: -2.5rem;
+  --wind-duration: 2.9s;
+
+  top: -3%;
+  opacity: 0.56;
+}
+
+.conditionWindIcon i:nth-child(2) {
+  --wind-pattern: 3.15rem;
+  --wind-travel: -3.15rem;
+  --wind-duration: 3.8s;
+
+  top: 19%;
+  opacity: 0.78;
+}
+
+.conditionWindIcon i:nth-child(3) {
+  top: 42%;
+  opacity: 0.92;
+}
+
+.conditionWindIcon i:nth-child(4) {
+  --wind-pattern: 3.4rem;
+  --wind-travel: -3.4rem;
+  --wind-duration: 4.1s;
+
+  top: 71%;
+  opacity: 0.7;
+}
+
+.conditionWindIcon i:nth-child(5) {
+  --wind-pattern: 2.65rem;
+  --wind-travel: -2.65rem;
+  --wind-duration: 2.9s;
+
+  top: 97%;
+  opacity: 0.5;
+}
+
+.conditionOptions button:hover > .conditionWindIcon,
+.conditionOptions button:focus-visible > .conditionWindIcon,
+.conditionOptions button[aria-pressed='true'] > .conditionWindIcon {
+  color: rgb(241 252 250 / 90%);
+  border-color: rgb(241 252 250 / 48%);
+  opacity: 0.92;
+}
+
+.conditionOptions button:hover .conditionWindIcon i,
+.conditionOptions button:focus-visible .conditionWindIcon i,
+.conditionOptions button[aria-pressed='true'] .conditionWindIcon i {
+  animation-play-state: running;
+}
+
+@keyframes prediction-condition-wind-line {
+  to {
+    background-position: var(--wind-travel) 50%;
+  }
+}
+
+.conditionOptions button > .conditionDroughtIcon {
+  position: absolute;
+  z-index: 0;
+  width: 55%;
+  aspect-ratio: 1;
+  color: rgb(239 224 177 / 72%);
+  opacity: 0.68;
+  pointer-events: none;
+  transition: color 220ms ease, opacity 220ms ease;
+}
+
+.droughtCore {
+  position: absolute;
+  inset: 33%;
+  z-index: 1;
+  background: transparent;
+  border: 3px solid currentColor;
+  border-top-color: rgb(255 248 218 / 96%);
+  border-radius: 50%;
+  transform-origin: center;
+}
+
+.droughtRays {
+  position: absolute;
+  inset: 0;
+}
+
+.droughtRays i {
+  --drought-ray-angle: 0deg;
+
+  position: absolute;
+  top: 50%;
+  left: calc(50% - 1.5px);
+  width: 3px;
+  height: 50%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0 52%,
+    currentColor 52% 100%
+  );
+  border-radius: 999px;
+  clip-path: inset(0 0 0 0);
+  transform: rotate(var(--drought-ray-angle));
+  transform-origin: 50% 0;
+}
+
+.droughtRays i:nth-child(2) { --drought-ray-angle: 45deg; }
+.droughtRays i:nth-child(3) { --drought-ray-angle: 90deg; }
+.droughtRays i:nth-child(4) { --drought-ray-angle: 135deg; }
+.droughtRays i:nth-child(5) { --drought-ray-angle: 180deg; }
+.droughtRays i:nth-child(6) { --drought-ray-angle: 225deg; }
+.droughtRays i:nth-child(7) { --drought-ray-angle: 270deg; }
+.droughtRays i:nth-child(8) { --drought-ray-angle: 315deg; }
+
+.conditionOptions button:hover > .conditionDroughtIcon,
+.conditionOptions button:focus-visible > .conditionDroughtIcon,
+.conditionOptions button[aria-pressed='true'] > .conditionDroughtIcon {
+  color: rgb(255 239 187 / 94%);
+  opacity: 0.96;
+}
+
+.conditionOptions button:hover .droughtCore,
+.conditionOptions button:focus-visible .droughtCore,
+.conditionOptions button[aria-pressed='true'] .droughtCore {
+  animation: prediction-condition-drought-core 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.conditionOptions button:hover .droughtRays i,
+.conditionOptions button:focus-visible .droughtRays i,
+.conditionOptions button[aria-pressed='true'] .droughtRays i {
+  animation: prediction-condition-drought-rays 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes prediction-condition-drought-core {
+  0% {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+
+  36% {
+    opacity: 0.3;
+    transform: rotate(280deg) scale(0.75);
+  }
+
+  45% {
+    opacity: 0;
+    transform: rotate(360deg) scale(0.65);
+  }
+
+  70%,
+  100% {
+    opacity: 1;
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes prediction-condition-drought-rays {
+  0% {
+    clip-path: inset(0 0 0 0);
+  }
+
+  45% {
+    clip-path: inset(0 0 38% 0);
+  }
+
+  70%,
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.conditionOptions button > .conditionDiseaseIcon {
+  position: absolute;
+  z-index: 0;
+  display: block;
+  width: 55%;
+  aspect-ratio: 1;
+  overflow: visible;
+  color: rgb(207 226 203 / 72%);
+  opacity: 0.7;
+  pointer-events: none;
+  transition: color 220ms ease, opacity 220ms ease;
+}
+
+.diseaseLeafOutline,
+.diseaseLeafVein {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.diseaseLeafOutline {
+  stroke-width: 3;
+}
+
+.diseaseLeafVein {
+  stroke-width: 2.5;
+}
+
+.diseaseSpot {
+  --disease-spot-duration: 2.4s;
+  --disease-spot-delay: 0s;
+
+  fill: currentColor;
+  opacity: 0.82;
+  transform: scale(1);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.diseaseSpot:nth-child(2) {
+  --disease-spot-duration: 2.8s;
+  --disease-spot-delay: -0.65s;
+}
+
+.diseaseSpot:nth-child(3) {
+  --disease-spot-duration: 2.1s;
+  --disease-spot-delay: -1.1s;
+}
+
+.diseaseSpot:nth-child(4) {
+  --disease-spot-duration: 2.65s;
+  --disease-spot-delay: -1.55s;
+}
+
+.diseaseSpot:nth-child(5) {
+  --disease-spot-duration: 2.3s;
+  --disease-spot-delay: -0.4s;
+}
+
+.conditionOptions button:hover > .conditionDiseaseIcon,
+.conditionOptions button:focus-visible > .conditionDiseaseIcon,
+.conditionOptions button[aria-pressed='true'] > .conditionDiseaseIcon {
+  color: rgb(226 245 218 / 94%);
+  opacity: 0.98;
+}
+
+.conditionOptions button:hover .diseaseSpot,
+.conditionOptions button:focus-visible .diseaseSpot,
+.conditionOptions button[aria-pressed='true'] .diseaseSpot {
+  animation: prediction-condition-disease-spot var(--disease-spot-duration) ease-in-out infinite;
+  animation-delay: var(--disease-spot-delay);
+}
+
+@keyframes prediction-condition-disease-spot {
+  0%,
+  100% {
+    opacity: 0.82;
+    transform: scale(1);
+  }
+
+  38% {
+    opacity: 1;
+    transform: scale(1.5);
+  }
+
+  72% {
+    opacity: 0.48;
+    transform: scale(0.68);
+  }
+}
+
+.conditionOptions button > .conditionSoilIcon {
+  position: absolute;
+  z-index: 0;
+  display: grid;
+  width: 55%;
+  aspect-ratio: 1;
+  color: rgb(220 199 164 / 74%);
+  opacity: 0.74;
+  place-items: center;
+  pointer-events: none;
+  transition: color 220ms ease, opacity 220ms ease;
+}
+
+.soilGrid {
+  display: grid;
+  grid-template-columns: repeat(3, clamp(4px, 0.4vw, 6px));
+  grid-template-rows: repeat(3, clamp(4px, 0.4vw, 6px));
+  gap: clamp(5px, 0.48vw, 7px);
+  transform: rotate(45deg) scale(1.18);
+  transform-origin: center;
+}
+
+.soilGrid i {
+  width: 100%;
+  height: 100%;
+  background: currentColor;
+  border-radius: 50%;
+  opacity: 1;
+  transform: scale(1);
+}
+
+.conditionOptions button:hover > .conditionSoilIcon,
+.conditionOptions button:focus-visible > .conditionSoilIcon,
+.conditionOptions button[aria-pressed='true'] > .conditionSoilIcon {
+  color: rgb(240 219 178 / 96%);
+  opacity: 0.98;
+}
+
+.conditionOptions button:hover .soilGrid,
+.conditionOptions button:focus-visible .soilGrid,
+.conditionOptions button[aria-pressed='true'] .soilGrid {
+  animation: prediction-condition-soil-grid 4.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.conditionOptions button:hover .soilGrid i:nth-child(2),
+.conditionOptions button:hover .soilGrid i:nth-child(4),
+.conditionOptions button:hover .soilGrid i:nth-child(6),
+.conditionOptions button:hover .soilGrid i:nth-child(8),
+.conditionOptions button:focus-visible .soilGrid i:nth-child(2),
+.conditionOptions button:focus-visible .soilGrid i:nth-child(4),
+.conditionOptions button:focus-visible .soilGrid i:nth-child(6),
+.conditionOptions button:focus-visible .soilGrid i:nth-child(8),
+.conditionOptions button[aria-pressed='true'] .soilGrid i:nth-child(2),
+.conditionOptions button[aria-pressed='true'] .soilGrid i:nth-child(4),
+.conditionOptions button[aria-pressed='true'] .soilGrid i:nth-child(6),
+.conditionOptions button[aria-pressed='true'] .soilGrid i:nth-child(8) {
+  animation: prediction-condition-soil-points 4.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes prediction-condition-soil-grid {
+  0%,
+  10% {
+    transform: rotate(45deg) scale(1.18);
+  }
+
+  32%,
+  42% {
+    transform: rotate(90deg) scale(1.32);
+  }
+
+  64%,
+  72% {
+    transform: rotate(135deg) scale(1.32);
+  }
+
+  100% {
+    transform: rotate(45deg) scale(1.18);
+  }
+}
+
+@keyframes prediction-condition-soil-points {
+  0%,
+  42% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  64%,
+  72% {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.conditionOptions button > .conditionDensityIcon {
+  position: absolute;
+  z-index: 0;
+  width: 55%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  color: rgb(208 222 219 / 74%);
+  border: 3px solid rgb(208 222 219 / 34%);
+  border-radius: 50%;
+  opacity: 0.72;
+  pointer-events: none;
+  transition: border-color 220ms ease, color 220ms ease, opacity 220ms ease;
+}
+
+.densityGrid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, currentColor 3px, transparent 3px),
+    linear-gradient(to bottom, currentColor 3px, transparent 3px);
+  background-position: 50% 50%;
+  background-size: 1.25rem 1.25rem;
+}
+
+.conditionOptions button:hover > .conditionDensityIcon,
+.conditionOptions button:focus-visible > .conditionDensityIcon,
+.conditionOptions button[aria-pressed='true'] > .conditionDensityIcon {
+  color: rgb(230 244 241 / 94%);
+  border-color: rgb(230 244 241 / 54%);
+  opacity: 0.98;
+}
+
+.conditionOptions button:hover .densityGrid,
+.conditionOptions button:focus-visible .densityGrid,
+.conditionOptions button[aria-pressed='true'] .densityGrid {
+  animation: prediction-condition-density-grid 4.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes prediction-condition-density-grid {
+  0%,
+  12% {
+    background-size: 1.25rem 1.25rem;
+  }
+
+  34%,
+  44% {
+    background-size: 0.82rem 0.82rem;
+  }
+
+  66%,
+  76% {
+    background-size: 0.52rem 0.52rem;
+  }
+
+  100% {
+    background-size: 1.25rem 1.25rem;
+  }
+}
+
+@keyframes prediction-exit-ring-build {
+  from {
+    opacity: 0;
+    stroke-dasharray: 0 1;
+    stroke-dashoffset: 0;
+  }
+
+  to {
+    opacity: 1;
+    stroke-dasharray: 1 0;
+    stroke-dashoffset: -0.08;
+  }
+}
+
+@keyframes prediction-exit-ring-unbuild {
+  from {
+    opacity: 1;
+    stroke-dasharray: 1 0;
+    stroke-dashoffset: -0.08;
+  }
+
+  to {
+    opacity: 0;
+    stroke-dasharray: 0 1;
+    stroke-dashoffset: -1;
+  }
+}
+
+@keyframes prediction-exit-mark-build {
+  from {
+    opacity: 0;
+    transform: rotate(-150deg) scale(0.55);
+  }
+
+  74% {
+    opacity: 1;
+    transform: rotate(12deg) scale(1.06);
+  }
+
+  to {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+}
+
+@keyframes prediction-exit-mark-unbuild {
+  from {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: rotate(135deg) scale(0.55);
+  }
+}
+
 
 @keyframes prediction-condition-copy-in {
   from {
@@ -553,12 +1385,6 @@
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes prediction-ring-orbit {
-  to {
-    transform: rotate(1turn);
   }
 }
 
@@ -700,7 +1526,7 @@
   position: absolute;
   top: 50%;
   left: clamp(2.75rem, 7.8vw, 12.5rem);
-  width: min(55rem, 48vw);
+  width: min(70rem, 64vw);
   text-align: left;
   transform: translateY(-43%);
 }
@@ -718,9 +1544,10 @@
 }
 
 .layer[data-scene-id='field'] .copy > p:last-child {
-  max-width: 39rem;
+  max-width: 50rem;
   margin: clamp(1.4rem, 2vw, 2rem) 0 0;
   color: rgb(255 255 255 / 82%);
+  font-size: clamp(1.22rem, 1.55vw, 1.45rem);
 }
 
 .hint {
@@ -806,10 +1633,14 @@
     line-height: 0.94;
   }
 
+  .fieldTitleLines {
+    width: min(42rem, calc(115vw - 3rem));
+  }
+
   .layer[data-scene-id='field'] .copy > p:last-child {
     max-width: 29rem;
     margin-top: 1.1rem;
-    font-size: 0.9rem;
+    font-size: 1.1rem;
     line-height: 1.55;
   }
 
@@ -856,10 +1687,14 @@
     font-size: clamp(2.8rem, 13vw, 4.75rem);
   }
 
+  .predictionTitleLines {
+    width: min(34rem, calc(100vw - 3rem));
+  }
+
   .predictionCopy p {
     max-width: 25rem;
     margin-top: 1rem;
-    font-size: 0.88rem;
+    font-size: 0.98rem;
   }
 
   .testActionOrbit {
@@ -889,6 +1724,10 @@
     font-size: clamp(2.65rem, 12vw, 4.5rem);
   }
 
+  .conditionSelectionTitle {
+    width: 100%;
+  }
+
   .conditionCopy > p:last-child {
     max-width: 25rem;
     margin-top: 0.9rem;
@@ -896,26 +1735,42 @@
   }
 
   .conditionOptions {
-    bottom: max(2.25rem, env(safe-area-inset-bottom));
+    bottom: max(4.25rem, calc(env(safe-area-inset-bottom) + 2rem));
     left: 1.5rem;
     flex-wrap: wrap;
-    gap: 0.55rem;
+    gap: 1.7rem 0.55rem;
     width: calc(100vw - 3rem);
   }
 
   .conditionOptions button {
-    width: clamp(4.15rem, 19vw, 5rem);
+    width: clamp(4.65rem, 20vw, 5.4rem);
     font-size: 0.5rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .testActionOrbit::before {
-    animation: none;
-  }
-
   .testActionOrbit {
     transition: none;
+  }
+
+  .predictionSubtitle span,
+  .conditionBody span,
+  .fieldSubtitle span,
+  .resultIntroEyebrow span,
+  .resultSubtitle span,
+  .testActionInnerRing,
+  .testActionOuterRing,
+  .testActionOrbitHighlight,
+  .testAction {
+    animation: none !important;
+    clip-path: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+
+  .testActionOrbitHighlight {
+    opacity: 0 !important;
   }
 
   .predictionIntro,
@@ -925,6 +1780,32 @@
   .conditionOptions button {
     animation: none;
     transition: none;
+  }
+
+  .conditionOptions button > .conditionLabel {
+    transition: none;
+  }
+
+  .conditionWindIcon i {
+    animation: none;
+  }
+
+  .droughtCore,
+  .droughtRays i {
+    animation: none !important;
+  }
+
+  .diseaseSpot {
+    animation: none !important;
+  }
+
+  .soilGrid,
+  .soilGrid i {
+    animation: none !important;
+  }
+
+  .densityGrid {
+    animation: none !important;
   }
 
   .seedSelector,
@@ -1076,7 +1957,6 @@
   left: clamp(2.75rem, 8vw, 10rem);
   z-index: 5;
   width: min(38rem, 39vw);
-  animation: result-inspection-copy-in 420ms ease both;
   transform: translateY(-50%);
 }
 
@@ -1239,13 +2119,102 @@
   line-height: 1.65;
 }
 
-.resultOrbitAction {
+.resultOrbitControl {
   position: absolute;
   top: clamp(8rem, 17vh, 12rem);
   right: clamp(4rem, 11vw, 12rem);
   z-index: 3;
   display: grid;
   width: clamp(8.5rem, 11vw, 11.5rem);
+  aspect-ratio: 1;
+  place-items: center;
+  pointer-events: none;
+  transition: transform 240ms ease;
+}
+
+.resultInspectionTitle {
+  display: block;
+  width: min(38rem, 39vw);
+  pointer-events: auto;
+}
+
+.resultExperience[data-controls-ready='true'] .resultOrbitControl {
+  pointer-events: auto;
+}
+
+.resultActionRings {
+  position: absolute;
+  inset: -1.45rem;
+  z-index: 2;
+  width: calc(100% + 2.9rem);
+  height: calc(100% + 2.9rem);
+  overflow: visible;
+  pointer-events: none;
+  transform: rotate(-90deg);
+}
+
+.resultActionInnerRing,
+.resultActionOuterRing {
+  fill: none;
+  stroke-dasharray: none;
+  stroke-linecap: butt;
+  vector-effect: non-scaling-stroke;
+}
+
+.resultActionInnerRing { stroke: rgb(255 255 255 / 82%); }
+.resultActionOuterRing { stroke: rgb(255 255 255 / 36%); }
+
+.resultActionOrbitHighlight {
+  fill: none;
+  opacity: 0;
+  stroke: rgb(255 255 255 / 92%);
+  stroke-dasharray: 0.22 0.78;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.resultExperience[data-result-intro-state='waiting'] .resultActionInnerRing,
+.resultExperience[data-result-intro-state='waiting'] .resultActionOuterRing {
+  stroke-dasharray: 0 1;
+}
+
+.resultExperience:not([data-result-intro-state='waiting']) .resultActionInnerRing {
+  animation: prediction-inner-ring-draw 700ms cubic-bezier(0.35, 0, 0.2, 1) 1800ms both;
+}
+
+.resultExperience:not([data-result-intro-state='waiting']) .resultActionOuterRing {
+  animation: prediction-outer-ring-draw 900ms cubic-bezier(0.35, 0, 0.2, 1) 1950ms both;
+}
+
+.resultExperience[data-controls-ready='true'] .resultActionInnerRing,
+.resultExperience[data-controls-ready='true'] .resultActionOuterRing {
+  animation: none;
+  stroke-dasharray: none;
+}
+
+.resultExperience[data-controls-ready='true'] .resultActionOrbitHighlight {
+  opacity: 1;
+  animation: prediction-svg-ring-orbit 4.6s linear infinite;
+}
+
+.resultExperience[data-control-exiting='true'] .resultActionInnerRing {
+  animation: result-inner-ring-undraw 550ms cubic-bezier(0.4, 0, 0.65, 1) 70ms both;
+}
+
+.resultExperience[data-control-exiting='true'] .resultActionOuterRing {
+  animation: result-outer-ring-undraw 700ms cubic-bezier(0.4, 0, 0.65, 1) both;
+}
+
+.resultExperience[data-control-exiting='true'] .resultActionOrbitHighlight {
+  opacity: 0;
+  animation: none;
+}
+
+.resultOrbitAction {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 100%;
   aspect-ratio: 1;
   padding: 1.2rem;
   color: #fff;
@@ -1257,30 +2226,39 @@
   text-align: center;
   text-transform: uppercase;
   background: rgb(255 255 255 / 5%);
-  border: 1px solid rgb(255 255 255 / 82%);
+  border: 0;
   border-radius: 50%;
   cursor: pointer;
   place-items: center;
-  pointer-events: auto;
-  transition: background-color 220ms ease, transform 240ms ease;
+  pointer-events: none;
+  transition: background-color 220ms ease, opacity 400ms ease, transform 400ms ease;
 }
 
-.resultOrbitAction::before {
-  position: absolute;
-  inset: -1.45rem;
-  border: 1px solid rgb(255 255 255 / 36%);
-  border-bottom-color: transparent;
-  border-left-color: rgb(255 255 255 / 9%);
-  border-radius: 50%;
-  content: '';
-  animation: result-orbit-turn 8s linear infinite;
-  pointer-events: none;
+.resultExperience[data-result-intro-state='waiting'] .resultOrbitAction {
+  opacity: 0;
+  transform: scale(0.88);
+}
+
+.resultExperience:not([data-result-intro-state='waiting']) .resultOrbitAction {
+  animation: prediction-test-action-reveal 400ms cubic-bezier(0.2, 0.72, 0.2, 1) 2350ms both;
+}
+
+.resultExperience[data-controls-ready='true'] .resultOrbitAction {
+  pointer-events: auto;
+}
+
+.resultExperience[data-control-exiting='true'] .resultOrbitAction {
+  animation: result-action-hide 360ms cubic-bezier(0.4, 0, 0.65, 1) both;
+}
+
+.resultOrbitControl:hover,
+.resultOrbitControl:focus-within {
+  transform: scale(1.06);
 }
 
 .resultOrbitAction:hover,
 .resultOrbitAction:focus-visible {
   background: rgb(255 255 255 / 12%);
-  transform: scale(1.06);
 }
 
 .resultOrbitAction:focus-visible,
@@ -1409,10 +2387,17 @@
 
 .closingActionLabel {
   position: relative;
-  display: inline-block;
-  max-width: 100%;
+  display: flex;
+  justify-content: center;
+  width: min(100%, var(--closing-action-width));
   text-align: center;
   transition: transform 900ms cubic-bezier(0.2, 0.72, 0.2, 1);
+}
+
+.closingActionTitle {
+  width: 100%;
+  color: inherit;
+  pointer-events: none;
 }
 
 .closingActionLabel::after {
@@ -1508,12 +2493,6 @@
   opacity: 1;
 }
 
-@keyframes result-orbit-turn {
-  to {
-    transform: rotate(1turn);
-  }
-}
-
 @media (max-width: 759px) {
   .resultCopy {
     top: 14vh;
@@ -1538,15 +2517,20 @@
     line-height: 1.55;
   }
 
-  .resultOrbitAction {
+  .resultOrbitControl {
     top: 56%;
     right: 8vw;
     width: 6.5rem;
+  }
+
+  .resultOrbitAction {
     font-size: 0.56rem;
   }
 
-  .resultOrbitAction::before {
+  .resultActionRings {
     inset: -0.85rem;
+    width: calc(100% + 1.7rem);
+    height: calc(100% + 1.7rem);
   }
 
   .resultInspectionClose {
@@ -1571,7 +2555,11 @@
     font-size: clamp(2.7rem, 12vw, 4.25rem);
   }
 
-  .resultInspectionCopy > p:last-child {
+  .resultInspectionTitle {
+    width: 100%;
+  }
+
+.resultInspectionCopy > p:last-child {
     max-width: 27rem;
     margin-top: 0.8rem;
     font-size: 0.8rem;
@@ -1657,13 +2645,25 @@
   }
 }
 
+.resultInspectionBody span {
+  display: block;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.resultInspectionCopy[data-intro-state='waiting'] .resultInspectionBody span {
+  clip-path: inset(0 100% 0 0);
+  opacity: 0;
+  transform: translateX(-0.75rem);
+}
+
+.resultInspectionCopy:not([data-intro-state='waiting']) .resultInspectionBody span {
+  animation: result-supporting-copy-reveal 800ms cubic-bezier(0.22, 0.72, 0.2, 1) 1450ms both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .resultJourney {
     --result-transition-motion-y: 0px;
-  }
-
-  .resultOrbitAction::before {
-    animation: none;
   }
 
   .resultOrbitAction,
@@ -1678,6 +2678,22 @@
   .closingActionLabel::after,
   .closingActionIcon {
     transition: none;
+  }
+
+  .resultActionInnerRing,
+  .resultActionOuterRing,
+  .resultActionOrbitHighlight,
+  .resultInspectionBody span,
+  .resultOrbitAction {
+    animation: none !important;
+    clip-path: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    stroke-dasharray: none !important;
+  }
+
+  .resultActionOrbitHighlight {
+    opacity: 0 !important;
   }
 
   .resultExperience[data-inspection-open='true'] .resultInspection {
