@@ -1,10 +1,39 @@
 export const PREDICTION_RENDER_CONFIG = {
-  modelUrl: '/models/prediction/WheatPlants.glb',
-  heroPlantName: 'WheatPlant1',
+  models: {
+    hero: {
+      rootName: 'PredictionWheat',
+      url: '/models/prediction/PredictionWheat.glb',
+    },
+    fieldFar: {
+      meshName: 'PredictionWheat_LOD1',
+      url: '/models/prediction/PredictionWheat_LOD1.glb',
+    },
+    fieldNear: {
+      rootName: 'PredictionWheat',
+      url: '/models/prediction/PredictionWheat_LOD2.glb',
+    },
+  },
   // At this scale the opening frame contains the complete wheat head, while
   // the closing frame settles around the stem base rather than showing the
   // entire plant at once.
-  heroScale: 2.45,
+  heroScale: 3.3,
+  heroMaterial: {
+    // Override the AI-exported glossy PBR response on the strong foreground
+    // plant while retaining its base-color and normal textures.
+    ior: 1.4,
+    metalness: 0,
+    normalStrength: 1.7,
+    roughness: 0.85,
+    specularIntensity: 0.18,
+  },
+  backdrop: {
+    // Blur the complete environmental plate, not individual plant meshes.
+    // The hero is rendered afterward and therefore remains fully sharp.
+    blurIterations: 3,
+    blurRadius: 3.8,
+    planeZ: -0.18,
+    resolutionScale: 0.44,
+  },
   camera: {
     x: 0,
     startY: 3.4,
@@ -68,37 +97,56 @@ export const PREDICTION_RENDER_CONFIG = {
     size: [140, 220],
     tint: '#9a806d',
   },
+  shadows: {
+    // Projected field shadows live inside the blurred backdrop so they can
+    // include both the instanced field and a proxy for the separately
+    // rendered hero without paying for a full dynamic shadow map.
+    baseOpacity: 0.08,
+    color: '#302215',
+    direction: [0.56, -0.83],
+    diseaseOpacityScale: 0.55,
+    droughtOpacity: 0.58,
+    heroLength: 2.15,
+    heroWidth: 0.4,
+    lengthScale: 0.38,
+    minimumLength: 0.72,
+    minimumWidth: 0.12,
+    stormOpacityScale: 0.28,
+    widthScale: 0.085,
+    y: -0.295,
+  },
   field: {
     leanRange: 0.055,
     seed: 48271,
-    variantNames: ['WheatPlant1', 'WheatPlant2'],
-    variantTints: ['#78916b', '#82966c'],
+    tint: '#ffffff',
+    tintVariation: 0.12,
     layers: [
       {
         id: 'far',
-        // Fewer separable passes reduce fill-rate cost. The larger radius
-        // preserves approximately the same accumulated softness.
-        blurIterations: 1,
-        blurPlaneZ: -5.3,
-        blurRadius: 2.6,
-        blurResolutionScale: 0.35,
-        count: 520,
+        assetId: 'far',
+        count: 220,
         depthRange: [4, 86],
         heroClearingRadius: 0,
         horizontalRange: [9, 58],
-        scaleRange: [4.8, 22],
+        scaleRange: [6.5, 29.5],
       },
       {
         id: 'mid',
-        blurIterations: 1,
-        blurPlaneZ: -1.35,
-        blurRadius: 1.7,
-        blurResolutionScale: 0.55,
-        count: 240,
-        depthRange: [0.65, 13],
-        heroClearingRadius: 0.85,
+        assetId: 'far',
+        count: 96,
+        depthRange: [1.25, 13],
+        heroClearingRadius: 0,
         horizontalRange: [4.5, 14],
-        scaleRange: [3, 5.8],
+        scaleRange: [4.05, 7.8],
+      },
+      {
+        id: 'near',
+        assetId: 'near',
+        count: 14,
+        depthRange: [0.45, 1.15],
+        heroClearingRadius: 0,
+        horizontalRange: [4.2, 5.4],
+        scaleRange: [3.8, 4.7],
       },
     ],
   },
@@ -130,8 +178,21 @@ export const PREDICTION_RENDER_CONFIG = {
     },
     drought: {
       backgroundColor: '#302817',
-      droopAmount: 0.68,
-      stemBend: 0.065,
+      droopAmount: 0.4,
+      // These authored LOD2 shape keys remain neutral outside drought. Their
+      // weights are applied through InstancedMesh's per-instance morph data.
+      nearLeafMorphTargets: {
+        Drought_CarpetRoll: 1,
+        Drought_Curl: 1,
+      },
+      fieldTint: '#d19a43',
+      // Replace enough of the imported green albedo to make the field read as
+      // dry golden wheat while retaining some authored texture variation.
+      fieldWashStrength: 0.72,
+      fieldWashTint: '#c98a35',
+      heroTint: '#d49a3f',
+      heroWashStrength: 0.72,
+      stemBend: 0.085,
       ground: {
         roughness: 1,
         tint: '#b89961',
@@ -140,31 +201,38 @@ export const PREDICTION_RENDER_CONFIG = {
         hemisphere: {
           skyColor: '#fff8e8',
           groundColor: '#5b4524',
-          intensity: 1.75,
+          intensity: 1.5,
         },
         key: {
           color: '#fffdf5',
-          intensity: 9.25,
+          intensity: 4.4,
         },
         rim: {
           color: '#eee3c7',
           intensity: 1.65,
         },
       },
-      transitionDamping: 1.25,
+      transitionDamping: 0.65,
     },
     disease: {
       backgroundColor: '#28291b',
       // Disease weakens the leaves without reaching the full drought pose.
-      droopAmount: 0.38,
-      stemBend: 0.032,
-      fieldTints: ['#a9a33f', '#b5ad48'],
+      bleachColor: '#dfd19a',
+      droopAmount: 0.24,
+      // Far plants use broader marks that survive the backdrop blur; the
+      // separated near leaves retain a finer lesion pattern.
+      farDetail: 0.42,
+      stemBend: 0.05,
+      fieldTint: '#b48a3b',
       ground: {
         roughness: 0.88,
         tint: '#81784c',
       },
-      leafTint: '#b7ae42',
-      structureTint: '#958b43',
+      leafTint: '#c49a3d',
+      lesionColor: '#4b2719',
+      nearLeafDetail: 1,
+      nearStructureDetail: 0.64,
+      structureTint: '#89612e',
       lighting: {
         hemisphere: {
           skyColor: '#c8ca8a',
@@ -180,7 +248,31 @@ export const PREDICTION_RENDER_CONFIG = {
           intensity: 0.82,
         },
       },
-      transitionDamping: 1.4,
+      transitionDamping: 0.7,
+    },
+    ambientMotion: {
+      // A constant light breeze keeps every condition alive. The field moves
+      // much more than the selected hero, while Wind layers gusts on top.
+      fieldSway: 0.038,
+      heroSway: 0.0065,
+      primaryFrequency: 0.58,
+      secondaryFrequency: 0.93,
+    },
+    conditionMotion: {
+      // A slow secondary sway keeps damaged background plants visibly alive
+      // while their leaves settle into the drought/disease pose. A faster,
+      // transition-only tremor is phase-shifted per leaf and plant.
+      fieldSway: 0.032,
+      heroLeafSway: 0.045,
+      heroLeafTransitionShake: 0.014,
+      heroStructureSway: 0.022,
+      leafSway: 0.09,
+      leafTransitionShake: 0.06,
+      primaryFrequency: 0.72,
+      secondaryFrequency: 1.15,
+      transitionPrimaryFrequency: 6.4,
+      transitionSecondaryFrequency: 10.3,
+      transitionStagger: 0.42,
     },
     soil: {
       // Procedural emissive points move toward each mesh's tip on isolated
@@ -190,10 +282,13 @@ export const PREDICTION_RENDER_CONFIG = {
       haloIntensity: 0.15,
       intensity: 3.35,
       particleColor: '#69ff87',
-      particleDensity: 64,
+      particleSpacing: 22,
       particleSize: 0.06,
+      fieldTint: '#8eaa72',
       reducedMotionSpeedScale: 0.3,
-      speed: 0.1,
+      // Screen pixels per second. Keeping direction in screen space prevents
+      // angled leaf surfaces from turning the upward flow sideways.
+      speed: 40,
       transitionDamping: 3.2,
     },
     fieldDensity: {

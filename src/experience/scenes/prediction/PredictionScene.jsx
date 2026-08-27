@@ -1,22 +1,43 @@
 import { useFrame, useLoader } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
-import { Color, MathUtils } from 'three'
+import { Color, Euler, MathUtils, Quaternion } from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { PredictionBackdrop } from './PredictionBackdrop.jsx'
 import { PredictionField } from './PredictionField.jsx'
 import { PredictionGround } from './PredictionGround.jsx'
+import { PredictionPlantShadows } from './PredictionPlantShadows.jsx'
 import { PredictionRain } from './PredictionRain.jsx'
 import { PredictionSky } from './PredictionSky.jsx'
 import {
-  createLeafDroopQuaternion,
+  applyHeroConditionTint,
+  configureHeroPlantMaterial,
+} from './heroPlantMaterial.js'
+import {
+  getConditionTransitionActivity,
+  getLeafConditionSway,
   getLeafDroughtDelay,
-  getLeafConditionDroopProgress,
-  getStemConditionBend,
+  getPlantSway,
+  getProgressAfterDelay,
   isPlantLeaf,
 } from './plantConditionMotion.js'
 import { PREDICTION_RENDER_CONFIG as CONFIG } from './predictionConfig.js'
+import { createFieldLayouts } from './fieldAssets.js'
 import { createSoilSurfaceOverlay } from './soilSurfaceEffect.js'
 
 const WEATHER = CONFIG.weather
+
+function updateHemisphereLight(light, skyColor, groundColor, intensity) {
+  if (!light) return
+  light.color.copy(skyColor)
+  light.groundColor.copy(groundColor)
+  light.intensity = intensity
+}
+
+function updateLight(light, color, intensity) {
+  if (!light) return
+  light.color.copy(color)
+  light.intensity = intensity
+}
 
 function nextDeterministicRandom(state) {
   state.seed = (Math.imul(state.seed, 1664525) + 1013904223) >>> 0
@@ -34,11 +55,11 @@ function getLightningEnvelope(elapsed) {
 }
 
 function prepareHeroPlant(scene) {
-  const sourcePlant = scene.getObjectByName(CONFIG.heroPlantName)
+  const sourcePlant = scene.getObjectByName(CONFIG.models.hero.rootName)
 
   if (!sourcePlant) {
     throw new Error(
-      `Prediction model is missing required group: ${CONFIG.heroPlantName}`,
+      `Prediction model is missing required group: ${CONFIG.models.hero.rootName}`,
     )
   }
 
@@ -48,8 +69,16 @@ function prepareHeroPlant(scene) {
   heroPlant.traverse((object) => {
     if (!object.isMesh || !object.material) return
     object.material = Array.isArray(object.material)
-      ? object.material.map((material) => material.clone())
-      : object.material.clone()
+      ? object.material.map((material) => configureHeroPlantMaterial(
+          material.clone(),
+          CONFIG.heroMaterial,
+          WEATHER.drought,
+        ))
+      : configureHeroPlantMaterial(
+          object.material.clone(),
+          CONFIG.heroMaterial,
+          WEATHER.drought,
+        )
   })
   return heroPlant
 }
@@ -63,18 +92,34 @@ export function PredictionScene({
   sceneStateRef,
   selectedPredictionCondition,
 }) {
-  const { scene } = useLoader(GLTFLoader, CONFIG.modelUrl)
-  const heroPlant = useMemo(() => prepareHeroPlant(scene), [scene])
+  const { scene: heroSourceScene } = useLoader(
+    GLTFLoader,
+    CONFIG.models.hero.url,
+  )
+  const { scene: farFieldSourceScene } = useLoader(
+    GLTFLoader,
+    CONFIG.models.fieldFar.url,
+  )
+  const { scene: nearFieldSourceScene } = useLoader(
+    GLTFLoader,
+    CONFIG.models.fieldNear.url,
+  )
+  const heroPlant = useMemo(
+    () => prepareHeroPlant(heroSourceScene),
+    [heroSourceScene],
+  )
+  const fieldLayouts = useMemo(createFieldLayouts, [])
   const heroLeaves = useMemo(() => {
     const leaves = []
     heroPlant.traverse((object) => {
       if (!object.isMesh || !isPlantLeaf(object.name)) return
+      const delay = getLeafDroughtDelay(object.name)
       leaves.push({
         baseQuaternion: object.quaternion.clone(),
-        delay: getLeafDroughtDelay(object.name),
-        droopQuaternion: createLeafDroopQuaternion(object.geometry),
+        flutterEuler: new Euler(),
+        flutterQuaternion: new Quaternion(),
         object,
-        workingQuaternion: object.quaternion.clone(),
+        phase: delay / 0.24 * Math.PI * 2,
       })
     })
     return leaves
@@ -83,18 +128,14 @@ export function PredictionScene({
     const states = []
     heroPlant.traverse((object) => {
       if (!object.isMesh || !object.material) return
-      const materials = Array.isArray(object.material)
+      const objectMaterials = Array.isArray(object.material)
         ? object.material
         : [object.material]
-      materials.forEach((material) => {
+      objectMaterials.forEach((material) => {
         if (!material.color) return
         states.push({
           baseColor: material.color.clone(),
-          diseaseColor: new Color(
-            isPlantLeaf(object.name)
-              ? WEATHER.disease.leafTint
-              : WEATHER.disease.structureTint,
-          ),
+          droughtColor: new Color(WEATHER.drought.heroTint),
           material,
         })
       })
@@ -116,7 +157,6 @@ export function PredictionScene({
       const overlay = createSoilSurfaceOverlay(
         sourceMesh,
         WEATHER.soil,
-        CONFIG.heroScale,
       )
       return { ...overlay, sourceMesh }
     })
@@ -136,6 +176,10 @@ export function PredictionScene({
   const verticalPointerOffset = useRef(0)
   const heroGroupRef = useRef()
   const backgroundColorRef = useRef()
+  const backdropHemisphereLightRef = useRef()
+  const backdropKeyLightRef = useRef()
+  const backdropRimLightRef = useRef()
+  const backdropLightningLightRef = useRef()
   const hemisphereLightRef = useRef()
   const keyLightRef = useRef()
   const rimLightRef = useRef()
@@ -167,6 +211,10 @@ export function PredictionScene({
     displaySky: new Color(CONFIG.lighting.hemisphere.skyColor),
     flash: new Color(WEATHER.flashColor),
     ground: new Color(CONFIG.lighting.hemisphere.groundColor),
+    heroGround: new Color(CONFIG.lighting.hemisphere.groundColor),
+    heroKey: new Color(CONFIG.lighting.key.color),
+    heroRim: new Color(CONFIG.lighting.rim.color),
+    heroSky: new Color(CONFIG.lighting.hemisphere.skyColor),
     key: new Color(CONFIG.lighting.key.color),
     rim: new Color(CONFIG.lighting.rim.color),
     sky: new Color(CONFIG.lighting.hemisphere.skyColor),
@@ -187,7 +235,7 @@ export function PredictionScene({
     diseaseSky: new Color(WEATHER.disease.lighting.hemisphere.skyColor),
   }), [background])
 
-  useFrame(({ camera }, deltaTime) => {
+  useFrame(({ camera, gl }, deltaTime) => {
     const weather = weatherRef.current
     const sceneIsActive = Boolean(sceneStateRef?.current?.isActive)
     weather.active = sceneIsActive
@@ -273,49 +321,96 @@ export function PredictionScene({
 
     const motionScale = reducedMotion ? 0.35 : 1
     if (heroGroupRef.current) {
-      const conditionStemBend = getStemConditionBend(
+      const ambientStructureSway = getPlantSway(
+        weather.time,
+        0.85,
+        WEATHER.ambientMotion.heroSway,
+        WEATHER.ambientMotion.primaryFrequency,
+        WEATHER.ambientMotion.secondaryFrequency,
+      ) * motionScale
+      const conditionStructureSway = getLeafConditionSway(
+        weather.time,
+        0.85,
         weather.drought,
-        weather.disease,
-        WEATHER.drought.stemBend,
-        WEATHER.disease.stemBend,
-      )
+        0,
+        WEATHER.conditionMotion.heroStructureSway,
+        WEATHER.conditionMotion.primaryFrequency,
+        WEATHER.conditionMotion.secondaryFrequency,
+      ) * motionScale
       const directionalBend = -WEATHER.wind.heroSway
         * weather.strength
         * (0.48 + weather.gust * 0.52)
       const shake = Math.sin(weather.time * 10.7)
         * WEATHER.wind.shake
         * weather.strength
-      heroGroupRef.current.rotation.z = (directionalBend + shake) * motionScale
-        - conditionStemBend
+      heroGroupRef.current.rotation.z = ambientStructureSway
+        + (directionalBend + shake) * motionScale
+        + conditionStructureSway
       heroGroupRef.current.rotation.x = (
         Math.sin(weather.time * 1.35 + 0.6) * 0.032
         + Math.sin(weather.time * 8.1) * WEATHER.wind.shake * 0.42
-      ) * weather.strength * motionScale + conditionStemBend * 0.22
-      heroGroupRef.current.position.x = directionalBend * 0.16 * motionScale
+      ) * weather.strength * motionScale
+        + ambientStructureSway * 0.28
+        + conditionStructureSway * 0.35
+      heroGroupRef.current.position.x = ambientStructureSway * 0.05
+        + directionalBend * 0.16 * motionScale
+        + conditionStructureSway * 0.08
     }
-
     heroLeaves.forEach((leaf) => {
-      const droopProgress = getLeafConditionDroopProgress(
+      const sway = getLeafConditionSway(
+        weather.time,
+        leaf.phase,
         weather.drought,
-        weather.disease,
-        leaf.delay,
-        WEATHER.drought.droopAmount,
-        WEATHER.disease.droopAmount,
+        0,
+        WEATHER.conditionMotion.heroLeafSway,
+        WEATHER.conditionMotion.primaryFrequency,
+        WEATHER.conditionMotion.secondaryFrequency,
+      ) * motionScale
+      const transitionActivity = getConditionTransitionActivity(
+        weather.drought,
+        0,
       )
-      leaf.workingQuaternion
-        .identity()
-        .slerp(leaf.droopQuaternion, droopProgress)
+      const variedTransitionActivity = getProgressAfterDelay(
+        transitionActivity,
+        (leaf.phase / (Math.PI * 2))
+          * WEATHER.conditionMotion.transitionStagger * 0.55,
+      )
+      const transitionShake = (
+        Math.sin(
+          weather.time * (
+            WEATHER.conditionMotion.transitionPrimaryFrequency
+              + leaf.phase * 0.08
+          ) + leaf.phase * 2.31,
+        )
+        + Math.sin(
+          weather.time * WEATHER.conditionMotion.transitionSecondaryFrequency
+            + leaf.phase * 0.83,
+        ) * 0.4
+      ) * WEATHER.conditionMotion.heroLeafTransitionShake
+        * variedTransitionActivity
+        * motionScale
+      leaf.flutterEuler.set(
+        sway * 0.5 + transitionShake * 0.68,
+        transitionShake * 0.2,
+        sway + transitionShake,
+      )
+      leaf.flutterQuaternion.setFromEuler(leaf.flutterEuler)
       leaf.object.quaternion
         .copy(leaf.baseQuaternion)
-        .multiply(leaf.workingQuaternion)
+        .multiply(leaf.flutterQuaternion)
     })
-    heroMaterialStates.forEach(({ baseColor, diseaseColor, material }) => {
-      material.color
-        .copy(baseColor)
-        .lerp(diseaseColor, weather.disease)
+    heroMaterialStates.forEach((state) => {
+      applyHeroConditionTint(state, weather.drought)
     })
+    const soilPixelsPerWorldUnit = gl.domElement.height / (
+      2
+      * Math.tan(MathUtils.degToRad(camera.fov) * 0.5)
+      * Math.max(0.1, camera.position.z)
+    )
     soilSurfaceOverlays.forEach(({ mesh, uniforms }) => {
       mesh.visible = weather.soil > 0.001
+      uniforms.uSoilPixelRatio.value = gl.getPixelRatio()
+      uniforms.uSoilPixelsPerWorldUnit.value = soilPixelsPerWorldUnit
       uniforms.uSoilStrength.value = weather.soil
       uniforms.uSoilTime.value = weather.soilTime
     })
@@ -341,25 +436,44 @@ export function PredictionScene({
       .lerp(colors.droughtGround, weather.drought)
       .lerp(colors.diseaseGround, weather.disease)
       .lerp(colors.flash, lightning * 0.18)
-    if (hemisphereLightRef.current) {
-      hemisphereLightRef.current.color.copy(colors.displaySky)
-      hemisphereLightRef.current.groundColor.copy(colors.displayGround)
-      const stormIntensity = MathUtils.lerp(
-        CONFIG.lighting.hemisphere.intensity,
-        WEATHER.lighting.hemisphere.intensity,
-        weather.strength,
-      )
-      const droughtIntensity = MathUtils.lerp(
-        stormIntensity,
-        WEATHER.drought.lighting.hemisphere.intensity,
-        weather.drought,
-      )
-      hemisphereLightRef.current.intensity = MathUtils.lerp(
-        droughtIntensity,
-        WEATHER.disease.lighting.hemisphere.intensity,
-        weather.disease,
-      ) + lightning * 1.5
-    }
+    const stormHemisphereIntensity = MathUtils.lerp(
+      CONFIG.lighting.hemisphere.intensity,
+      WEATHER.lighting.hemisphere.intensity,
+      weather.strength,
+    )
+    const droughtHemisphereIntensity = MathUtils.lerp(
+      stormHemisphereIntensity,
+      WEATHER.drought.lighting.hemisphere.intensity,
+      weather.drought,
+    )
+    const hemisphereIntensity = MathUtils.lerp(
+      droughtHemisphereIntensity,
+      WEATHER.disease.lighting.hemisphere.intensity,
+      weather.disease,
+    ) + lightning * 1.5
+    updateHemisphereLight(
+      backdropHemisphereLightRef.current,
+      colors.displaySky,
+      colors.displayGround,
+      hemisphereIntensity,
+    )
+
+    colors.heroSky
+      .copy(colors.sky)
+      .lerp(colors.stormSky, weather.strength)
+      .lerp(colors.droughtSky, weather.drought)
+      .lerp(colors.flash, lightning * 0.4)
+    colors.heroGround
+      .copy(colors.ground)
+      .lerp(colors.stormGround, weather.strength)
+      .lerp(colors.droughtGround, weather.drought)
+      .lerp(colors.flash, lightning * 0.18)
+    updateHemisphereLight(
+      hemisphereLightRef.current,
+      colors.heroSky,
+      colors.heroGround,
+      droughtHemisphereIntensity + lightning * 1.5,
+    )
 
     colors.displayKey
       .copy(colors.key)
@@ -367,24 +481,32 @@ export function PredictionScene({
       .lerp(colors.droughtKey, weather.drought)
       .lerp(colors.diseaseKey, weather.disease)
       .lerp(colors.flash, lightning * 0.68)
-    if (keyLightRef.current) {
-      keyLightRef.current.color.copy(colors.displayKey)
-      const stormIntensity = MathUtils.lerp(
-        CONFIG.lighting.key.intensity,
-        WEATHER.lighting.key.intensity,
-        weather.strength,
-      )
-      const droughtIntensity = MathUtils.lerp(
-        stormIntensity,
-        WEATHER.drought.lighting.key.intensity,
-        weather.drought,
-      )
-      keyLightRef.current.intensity = MathUtils.lerp(
-        droughtIntensity,
-        WEATHER.disease.lighting.key.intensity,
-        weather.disease,
-      ) + lightning * 3.5
-    }
+    const stormKeyIntensity = MathUtils.lerp(
+      CONFIG.lighting.key.intensity,
+      WEATHER.lighting.key.intensity,
+      weather.strength,
+    )
+    const droughtKeyIntensity = MathUtils.lerp(
+      stormKeyIntensity,
+      WEATHER.drought.lighting.key.intensity,
+      weather.drought,
+    )
+    const keyIntensity = MathUtils.lerp(
+      droughtKeyIntensity,
+      WEATHER.disease.lighting.key.intensity,
+      weather.disease,
+    ) + lightning * 3.5
+    updateLight(backdropKeyLightRef.current, colors.displayKey, keyIntensity)
+    colors.heroKey
+      .copy(colors.key)
+      .lerp(colors.stormKey, weather.strength)
+      .lerp(colors.droughtKey, weather.drought)
+      .lerp(colors.flash, lightning * 0.68)
+    updateLight(
+      keyLightRef.current,
+      colors.heroKey,
+      droughtKeyIntensity + lightning * 3.5,
+    )
 
     colors.displayRim
       .copy(colors.rim)
@@ -392,27 +514,39 @@ export function PredictionScene({
       .lerp(colors.droughtRim, weather.drought)
       .lerp(colors.diseaseRim, weather.disease)
       .lerp(colors.flash, lightning * 0.45)
-    if (rimLightRef.current) {
-      rimLightRef.current.color.copy(colors.displayRim)
-      const stormIntensity = MathUtils.lerp(
-        CONFIG.lighting.rim.intensity,
-        WEATHER.lighting.rim.intensity,
-        weather.strength,
-      )
-      const droughtIntensity = MathUtils.lerp(
-        stormIntensity,
-        WEATHER.drought.lighting.rim.intensity,
-        weather.drought,
-      )
-      rimLightRef.current.intensity = MathUtils.lerp(
-        droughtIntensity,
-        WEATHER.disease.lighting.rim.intensity,
-        weather.disease,
-      ) + lightning * 1.8
-    }
+    const stormRimIntensity = MathUtils.lerp(
+      CONFIG.lighting.rim.intensity,
+      WEATHER.lighting.rim.intensity,
+      weather.strength,
+    )
+    const droughtRimIntensity = MathUtils.lerp(
+      stormRimIntensity,
+      WEATHER.drought.lighting.rim.intensity,
+      weather.drought,
+    )
+    const rimIntensity = MathUtils.lerp(
+      droughtRimIntensity,
+      WEATHER.disease.lighting.rim.intensity,
+      weather.disease,
+    ) + lightning * 1.8
+    updateLight(backdropRimLightRef.current, colors.displayRim, rimIntensity)
+    colors.heroRim
+      .copy(colors.rim)
+      .lerp(colors.stormRim, weather.strength)
+      .lerp(colors.droughtRim, weather.drought)
+      .lerp(colors.flash, lightning * 0.45)
+    updateLight(
+      rimLightRef.current,
+      colors.heroRim,
+      droughtRimIntensity + lightning * 1.8,
+    )
+    const lightningIntensity = lightning
+      * WEATHER.lighting.lightning.intensity
     if (lightningLightRef.current) {
-      lightningLightRef.current.intensity = lightning
-        * WEATHER.lighting.lightning.intensity
+      lightningLightRef.current.intensity = lightningIntensity
+    }
+    if (backdropLightningLightRef.current) {
+      backdropLightningLightRef.current.intensity = lightningIntensity
     }
 
     // Virtual scroll is already damped. Keeping camera progress linear avoids
@@ -477,8 +611,50 @@ export function PredictionScene({
 
   return (
     <>
-      <color ref={backgroundColorRef} attach="background" args={[background]} />
-      <PredictionSky weatherRef={weatherRef} />
+      <PredictionBackdrop>
+        <color ref={backgroundColorRef} attach="background" args={[background]} />
+        <PredictionSky weatherRef={weatherRef} />
+        <hemisphereLight
+          ref={backdropHemisphereLightRef}
+          args={[
+            CONFIG.lighting.hemisphere.skyColor,
+            CONFIG.lighting.hemisphere.groundColor,
+            CONFIG.lighting.hemisphere.intensity,
+          ]}
+        />
+        <directionalLight
+          ref={backdropKeyLightRef}
+          {...CONFIG.lighting.key}
+        />
+        <directionalLight
+          ref={backdropRimLightRef}
+          {...CONFIG.lighting.rim}
+        />
+        <directionalLight
+          ref={backdropLightningLightRef}
+          color={WEATHER.lighting.lightning.color}
+          intensity={0}
+          position={WEATHER.lighting.lightning.position}
+        />
+        <PredictionGround weatherRef={weatherRef} />
+        <PredictionPlantShadows
+          fieldLayouts={fieldLayouts}
+          weatherRef={weatherRef}
+        />
+        <PredictionField
+          farSourceScene={farFieldSourceScene}
+          layouts={fieldLayouts}
+          nearSourceScene={nearFieldSourceScene}
+          reducedMotion={reducedMotion}
+          weatherRef={weatherRef}
+        />
+        <PredictionRain
+          quality={quality}
+          reducedMotion={reducedMotion}
+          weatherRef={weatherRef}
+        />
+      </PredictionBackdrop>
+
       <hemisphereLight
         ref={hemisphereLightRef}
         args={[
@@ -496,19 +672,6 @@ export function PredictionScene({
         position={WEATHER.lighting.lightning.position}
       />
 
-      <PredictionGround weatherRef={weatherRef} />
-      <PredictionField
-        background={background}
-        sceneStateRef={sceneStateRef}
-        sourceScene={scene}
-        weatherRef={weatherRef}
-      />
-      <PredictionRain
-        quality={quality}
-        reducedMotion={reducedMotion}
-        weatherRef={weatherRef}
-      />
-
       <group ref={heroGroupRef} scale={CONFIG.heroScale}>
         <primitive object={heroPlant} />
       </group>
@@ -516,4 +679,6 @@ export function PredictionScene({
   )
 }
 
-useLoader.preload(GLTFLoader, CONFIG.modelUrl)
+useLoader.preload(GLTFLoader, CONFIG.models.hero.url)
+useLoader.preload(GLTFLoader, CONFIG.models.fieldFar.url)
+useLoader.preload(GLTFLoader, CONFIG.models.fieldNear.url)

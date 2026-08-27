@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LANDING_INTRO } from '../../config/landingIntro.js'
 import { PREDICTION_CONTENT } from '../../config/predictionContent.js'
-import { SCENE_VISIBILITY_ENTER_EVENT } from '../../experience/sceneManagerState.js'
+import {
+  SCENE_DOMINANCE_EXIT_EVENT,
+  SCENE_VISIBILITY_ENTER_EVENT,
+} from '../../experience/sceneManagerState.js'
 import { TitleParticleText } from '../components/TitleParticleText/TitleParticleText.jsx'
 import styles from './SceneOverlays.module.css'
 import {
@@ -193,6 +196,23 @@ export function PredictionIntro({
     })
   }, [])
 
+  const resetTestsForSceneExit = useCallback(() => {
+    cancelAnimationFrame(conditionReplayFrame.current)
+    cancelAnimationFrame(exitReplayFrame.current)
+    restoreIntroButtonFocus.current = false
+    setPredictionTestsOpen(false)
+    setSelectedPredictionCondition(null)
+    setConditionIntroState(fallback ? 'complete' : 'waiting')
+    setTestExitState(fallback ? 'complete' : 'waiting')
+
+    if (
+      experienceRef.current?.contains(document.activeElement)
+      && document.activeElement instanceof HTMLElement
+    ) {
+      document.activeElement.blur()
+    }
+  }, [fallback, setPredictionTestsOpen, setSelectedPredictionCondition])
+
   useEffect(() => {
     const sceneLayer = experienceRef.current?.closest('[data-scene-layer]')
     if (!sceneLayer || fallback) return undefined
@@ -200,6 +220,10 @@ export function PredictionIntro({
     sceneLayer.addEventListener(
       SCENE_VISIBILITY_ENTER_EVENT,
       replayTitleIntro,
+    )
+    sceneLayer.addEventListener(
+      SCENE_DOMINANCE_EXIT_EVENT,
+      resetTestsForSceneExit,
     )
 
     return () => {
@@ -210,8 +234,12 @@ export function PredictionIntro({
         SCENE_VISIBILITY_ENTER_EVENT,
         replayTitleIntro,
       )
+      sceneLayer.removeEventListener(
+        SCENE_DOMINANCE_EXIT_EVENT,
+        resetTestsForSceneExit,
+      )
     }
-  }, [fallback, replayTitleIntro])
+  }, [fallback, replayTitleIntro, resetTestsForSceneExit])
 
   useEffect(() => {
     if (fallback || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {

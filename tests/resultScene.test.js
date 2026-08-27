@@ -61,6 +61,7 @@ test('the result grain overrides imported shine with a matte organic material', 
 
   const material = prepareMaterial({ material: source })
 
+  assert.equal(RESULT_SCENE_CONFIG.material.colorTint, '#f4f0e6')
   assert.equal(material.metalness, 0)
   assert.equal(material.metalnessMap, null)
   assert.equal(material.roughness, 1)
@@ -68,11 +69,18 @@ test('the result grain overrides imported shine with a matte organic material', 
   assert.equal(material.specularIntensity, 0.15)
   assert.equal(material.clearcoat, 0)
   assert.equal(material.sheen, 0)
-  assert.equal(material.normalScale.x, 0.25)
-  assert.equal(material.normalScale.y, 0.25)
+  assert.equal(material.normalScale.x, 1)
+  assert.equal(material.normalScale.y, 1)
 
   material.dispose()
   source.dispose()
+})
+
+test('the result grain has a restrained ambient fill', () => {
+  const fill = RESULT_SCENE_CONFIG.lighting.ambientFill
+
+  assert.equal(fill.color, '#fff8ec')
+  assert.equal(fill.intensity, 0.35)
 })
 
 test('grain inspection exposes three content-driven views', () => {
@@ -84,6 +92,10 @@ test('grain inspection exposes three content-driven views', () => {
   assert.ok(RESULT_CONTENT.inspection.views.every((view) => (
     view.title.length > 0 && view.body.length > 0
   )))
+})
+
+test('grain inspection uses a deliberately slow visual transition', () => {
+  assert.equal(RESULT_SCENE_CONFIG.inspection.transitionDamping, 1.4)
 })
 
 test('grain rotation snaps to the closest of three repeatable views', () => {

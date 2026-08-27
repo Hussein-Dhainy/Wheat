@@ -184,7 +184,7 @@ export function ResultExperience({
     return () => cancelAnimationFrame(inspectionReplayFrame.current)
   }, [fallback, resultInspectionOpen, selectedResultView])
 
-  const openInspection = () => {
+  const openInspection = ({ focusClose = true } = {}) => {
     const interaction = resultInteractionRef.current
     interaction.dragging = false
     interaction.rotationTarget = getNearestResultViewRotation(
@@ -194,7 +194,7 @@ export function ResultExperience({
       viewCount,
     )
     setResultInspectionOpen(true)
-    requestAnimationFrame(() => closeRef.current?.focus())
+    if (focusClose) requestAnimationFrame(() => closeRef.current?.focus())
   }
 
   const beginInspectionOpen = () => {
@@ -207,13 +207,17 @@ export function ResultExperience({
 
     setResultControlsReady(false)
     setResultControlExiting(true)
+    // Start the WebGL inspection transition with the button's exit motion.
+    // Focus still moves after the ring finishes so it never lands on the
+    // inspection close control while that panel is visually hidden.
+    openInspection({ focusClose: false })
   }
 
   const handleResultOuterRingAnimationComplete = (event) => {
     if (event.target !== event.currentTarget) return
 
     if (resultControlExiting) {
-      openInspection()
+      requestAnimationFrame(() => closeRef.current?.focus())
     } else {
       setResultControlsReady(true)
       if (restoreResultTriggerFocus.current) {

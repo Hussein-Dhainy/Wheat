@@ -30,7 +30,9 @@ export const RESULT_SCENE_CONFIG = {
     baseRotation: [-0.05, -0.42, 0],
   },
   inspection: {
-    transitionDamping: 4.4,
+    // Begin with the result button's exit and unfold slowly enough to read as
+    // one continuous move instead of a sudden zoom after the button vanishes.
+    transitionDamping: 1.4,
     particleZoom: 3.15,
     particleCameraTravel: 3.25,
     particleFadeRange: [0.32, 0.9],
@@ -54,7 +56,7 @@ export const RESULT_SCENE_CONFIG = {
     },
   },
   material: {
-    colorTint: '#eee5ad',
+    colorTint: '#f4f0e6',
     emissive: '#554414',
     emissiveIntensity: 0.12,
     // The source GLB carries an unusually strong specular extension and a
@@ -65,7 +67,16 @@ export const RESULT_SCENE_CONFIG = {
     specularIntensity: 0.15,
     clearcoat: 0,
     sheen: 0,
-    normalScale: 0.25,
+    normalScale: 1,
+  },
+  lighting: {
+    // Only the grain uses a light-reactive PBR material in this scene; the
+    // backdrop and particle systems are shader-driven. This ambient fill
+    // therefore lifts the grain evenly without brightening the background.
+    ambientFill: {
+      color: '#fff8ec',
+      intensity: 0.35,
+    },
   },
   atmosphere: {
     orangeFadeRange: [0.18, 0.82],

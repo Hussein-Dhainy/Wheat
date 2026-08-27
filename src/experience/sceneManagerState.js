@@ -16,6 +16,7 @@ const OVERLAY_DOMINANCE_HYSTERESIS = 0.04
 const SCENE_VISIBILITY_ENTER_THRESHOLD = 0.015
 const SCENE_VISIBILITY_EXIT_THRESHOLD = 0.001
 export const MINIMUM_TRANSITION_PROGRESS = 1e-6
+export const SCENE_DOMINANCE_EXIT_EVENT = 'wheat:scene-dominance-exit'
 export const SCENE_VISIBILITY_ENTER_EVENT = 'wheat:scene-visibility-enter'
 
 export function createRenderTarget(name) {
@@ -324,6 +325,21 @@ export function updateOverlayLayers(root, cache, transition) {
   }
 
   if (dominantIndex !== cache.dominantIndex) {
+    const previousDominantIndex = cache.dominantIndex
+    if (previousDominantIndex >= 0) {
+      layers[previousDominantIndex].dispatchEvent(new CustomEvent(
+        SCENE_DOMINANCE_EXIT_EVENT,
+        {
+          detail: {
+            nextSceneId: SCENE_REGISTRY[dominantIndex].id,
+            nextSceneIndex: dominantIndex,
+            sceneId: SCENE_REGISTRY[previousDominantIndex].id,
+            sceneIndex: previousDominantIndex,
+          },
+        },
+      ))
+    }
+
     layers.forEach((layer, index) => {
       const dominant = index === dominantIndex
       layer.inert = !dominant

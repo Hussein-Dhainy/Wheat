@@ -460,6 +460,7 @@ export function ResultScene({
 
       {/* A warm camera-side key lifts the matte grain through diffuse light,
           while pale blue and orange rear lights stay on its silhouettes. */}
+      <ambientLight {...CONFIG.lighting.ambientFill} />
       <hemisphereLight args={['#f2e2a8', '#052a20', 0.68]} />
       <directionalLight color="#ffd897" intensity={1.15} position={[4.2, 3.4, 4]} />
       <directionalLight color="#b0dced" intensity={1.85} position={[-3, 0.2, -4]} />

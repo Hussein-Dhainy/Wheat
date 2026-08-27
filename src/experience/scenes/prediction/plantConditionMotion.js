@@ -41,6 +41,66 @@ export function getProgressAfterDelay(progress, delay) {
   )
 }
 
+export function updateDroughtMorphInfluences(
+  influences,
+  morphTargets,
+  droughtProgress,
+  delay = 0,
+) {
+  influences.fill(0)
+  const progress = getProgressAfterDelay(
+    MathUtils.clamp(droughtProgress, 0, 1),
+    delay,
+  )
+
+  morphTargets.forEach(({ index, weight }) => {
+    influences[index] = progress * weight
+  })
+
+  return progress
+}
+
+export function getConditionStrength(droughtProgress, diseaseProgress) {
+  return MathUtils.clamp(
+    MathUtils.clamp(droughtProgress, 0, 1)
+      + MathUtils.clamp(diseaseProgress, 0, 1),
+    0,
+    1,
+  )
+}
+
+export function getConditionTransitionActivity(
+  droughtProgress,
+  diseaseProgress,
+) {
+  const drought = MathUtils.clamp(droughtProgress, 0, 1)
+  const disease = MathUtils.clamp(diseaseProgress, 0, 1)
+
+  // Each damped condition contributes only while it is between endpoints.
+  // The combined envelope works for neutral entry/exit and direct handoffs.
+  return MathUtils.clamp(
+    4 * (drought * (1 - drought) + disease * (1 - disease)),
+    0,
+    1,
+  )
+}
+
+function getConditionPoseAmount(
+  droughtProgress,
+  diseaseProgress,
+  droughtAmount,
+  diseaseAmount,
+) {
+  const drought = MathUtils.clamp(droughtProgress, 0, 1)
+  const disease = MathUtils.clamp(diseaseProgress, 0, 1)
+  const total = drought + disease
+  if (total < 0.000001) return 0
+
+  const strength = MathUtils.clamp(total, 0, 1)
+  const diseaseMix = disease / total
+  return strength * MathUtils.lerp(droughtAmount, diseaseAmount, diseaseMix)
+}
+
 export function getLeafConditionDroopProgress(
   droughtProgress,
   diseaseProgress,
@@ -48,14 +108,29 @@ export function getLeafConditionDroopProgress(
   droughtDroopAmount,
   diseaseDroopAmount,
 ) {
-  const droughtDroop = getProgressAfterDelay(droughtProgress, delay)
-    * droughtDroopAmount
-  const diseaseDroop = getProgressAfterDelay(diseaseProgress, delay)
-    * diseaseDroopAmount
+  const conditionStrength = getConditionStrength(
+    droughtProgress,
+    diseaseProgress,
+  )
+  const delayedStrength = getProgressAfterDelay(
+    conditionStrength,
+    delay,
+  )
+  const poseAmount = getConditionPoseAmount(
+    droughtProgress,
+    diseaseProgress,
+    droughtDroopAmount,
+    diseaseDroopAmount,
+  )
 
-  // Conditions overlap briefly while changing selection. Keep the stronger
-  // deformation instead of adding them into an exaggerated pose.
-  return MathUtils.clamp(Math.max(droughtDroop, diseaseDroop), 0, 1)
+  // Apply the stagger only to the shared damage envelope. During a direct
+  // drought/disease switch the envelope stays active while the pose amount
+  // blends between conditions, preventing a temporary return toward upright.
+  return MathUtils.clamp(
+    poseAmount * delayedStrength / Math.max(0.000001, conditionStrength),
+    0,
+    1,
+  )
 }
 
 export function getStemConditionBend(
@@ -64,10 +139,46 @@ export function getStemConditionBend(
   droughtBend,
   diseaseBend,
 ) {
-  const droughtResponse = MathUtils.clamp(droughtProgress, 0, 1) * droughtBend
-  const diseaseResponse = MathUtils.clamp(diseaseProgress, 0, 1) * diseaseBend
+  return getConditionPoseAmount(
+    droughtProgress,
+    diseaseProgress,
+    droughtBend,
+    diseaseBend,
+  )
+}
 
-  // A condition switch briefly overlaps both damped states. Keep the stronger
-  // bend so their values cannot add into an unintended sharp lean.
-  return Math.max(droughtResponse, diseaseResponse)
+export function getPlantSway(
+  time,
+  phase,
+  amplitude,
+  primaryFrequency,
+  secondaryFrequency,
+) {
+  return (
+    Math.sin(time * primaryFrequency + phase)
+    + Math.sin(time * secondaryFrequency + phase * 1.7) * 0.35
+  ) * amplitude
+}
+
+export function getLeafConditionSway(
+  time,
+  phase,
+  droughtProgress,
+  diseaseProgress,
+  amplitude,
+  primaryFrequency,
+  secondaryFrequency,
+) {
+  const conditionStrength = getConditionStrength(
+    droughtProgress,
+    diseaseProgress,
+  )
+
+  return getPlantSway(
+    time,
+    phase,
+    amplitude,
+    primaryFrequency,
+    secondaryFrequency,
+  ) * conditionStrength
 }

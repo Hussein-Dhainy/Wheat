@@ -6,10 +6,11 @@ import { createBlurPass, createRenderTarget } from './fieldGeometry.js'
 import { PREDICTION_RENDER_CONFIG as CONFIG } from './predictionConfig.js'
 
 export function FieldLayer({
-  assets,
+  asset,
   background,
   layer,
   layouts,
+  reducedMotion,
   renderOrder,
   sceneStateRef,
   weatherRef,
@@ -253,8 +254,9 @@ export function FieldLayer({
             position={CONFIG.weather.lighting.lightning.position}
           />
           <FieldInstances
-            assets={assets}
+            asset={asset}
             layouts={layouts}
+            reducedMotion={reducedMotion}
             weatherRef={weatherRef}
           />
         </>,
