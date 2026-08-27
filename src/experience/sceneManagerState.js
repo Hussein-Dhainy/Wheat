@@ -141,10 +141,22 @@ function getOverlayLayers(root, cache) {
   return cache.layers
 }
 
+function updateDataset(element, key, value) {
+  const nextValue = String(value)
+  if (element.dataset[key] !== nextValue) element.dataset[key] = nextValue
+}
+
+function updateStyleProperty(element, property, value) {
+  const nextValue = String(value)
+  if (element.style.getPropertyValue(property) !== nextValue) {
+    element.style.setProperty(property, nextValue)
+  }
+}
+
 function updateOverlayLayerVisibility(cache, layer, index, visibility) {
   const wasVisible = cache.layerVisibilityActive[index]
 
-  layer.style.setProperty('--scene-visibility', visibility)
+  updateStyleProperty(layer, '--scene-visibility', visibility)
 
   if (visibility <= SCENE_VISIBILITY_EXIT_THRESHOLD) {
     cache.layerVisibilityActive[index] = false
@@ -242,38 +254,57 @@ export function updateOverlayLayers(root, cache, transition) {
   const nextMotionOffset = transition.phase === 'transition'
     ? transition.progress - 1
     : 0
-  currentLayer.dataset.sceneContentProgress = transition.sceneProgress.toFixed(4)
-  currentLayer.dataset.transitionMotionOffset = currentMotionOffset.toFixed(4)
-  currentLayer.dataset.sectionId = transition.sectionId ?? ''
-  currentLayer.dataset.sectionIndex = String(currentSectionIndex)
-  currentLayer.dataset.sectionProgress = transition.sectionProgress.toFixed(4)
-  currentLayer.style.setProperty('--scene-progress', transition.sceneProgress)
+  updateDataset(
+    currentLayer,
+    'sceneContentProgress',
+    transition.sceneProgress.toFixed(4),
+  )
+  updateDataset(
+    currentLayer,
+    'transitionMotionOffset',
+    currentMotionOffset.toFixed(4),
+  )
+  updateDataset(currentLayer, 'sectionId', transition.sectionId ?? '')
+  updateDataset(currentLayer, 'sectionIndex', currentSectionIndex)
+  updateDataset(
+    currentLayer,
+    'sectionProgress',
+    transition.sectionProgress.toFixed(4),
+  )
+  updateStyleProperty(currentLayer, '--scene-progress', transition.sceneProgress)
   updateOverlayLayerVisibility(
     cache,
     currentLayer,
     transition.currentIndex,
     1 - transition.progress,
   )
-  currentLayer.style.setProperty('--section-progress', transition.sectionProgress)
-  currentLayer.style.setProperty(
+  updateStyleProperty(currentLayer, '--section-progress', transition.sectionProgress)
+  updateStyleProperty(
+    currentLayer,
     '--transition-motion-y',
     `${currentMotionOffset * -4}vh`,
   )
-  currentLayer.style.setProperty(
+  updateStyleProperty(
+    currentLayer,
     '--scene-scroll-offset',
     `${transition.sceneProgress * -100}vh`,
   )
-  nextLayer.dataset.sceneContentProgress = '0.0000'
-  nextLayer.dataset.transitionMotionOffset = nextMotionOffset.toFixed(4)
-  nextLayer.style.setProperty('--scene-progress', 0)
+  updateDataset(nextLayer, 'sceneContentProgress', '0.0000')
+  updateDataset(
+    nextLayer,
+    'transitionMotionOffset',
+    nextMotionOffset.toFixed(4),
+  )
+  updateStyleProperty(nextLayer, '--scene-progress', 0)
   updateOverlayLayerVisibility(
     cache,
     nextLayer,
     transition.nextIndex,
     transition.progress,
   )
-  nextLayer.style.setProperty('--section-progress', 0)
-  nextLayer.style.setProperty(
+  updateStyleProperty(nextLayer, '--section-progress', 0)
+  updateStyleProperty(
+    nextLayer,
     '--transition-motion-y',
     `${nextMotionOffset * -4}vh`,
   )
@@ -296,9 +327,14 @@ export function updateOverlayLayers(root, cache, transition) {
     const carouselIsActive = index === transition.currentIndex
       && SCENE_REGISTRY[index].id === 'genetics'
       && transition.sceneProgress >= carouselStart
-    layer.dataset.seedCarouselActive = carouselIsActive ? 'true' : 'false'
-    layer.style.setProperty('--seed-carousel-progress', carouselProgress)
-    layer.style.setProperty(
+    updateDataset(
+      layer,
+      'seedCarouselActive',
+      carouselIsActive ? 'true' : 'false',
+    )
+    updateStyleProperty(layer, '--seed-carousel-progress', carouselProgress)
+    updateStyleProperty(
+      layer,
       '--seed-carousel-offset',
       `${(1 - carouselProgress) * 1.5}rem`,
     )
@@ -368,14 +404,14 @@ export function updateOverlayLayers(root, cache, transition) {
     cache.announcementKey = announcementKey
   }
 
-  root.dataset.sceneA = String(transition.currentIndex)
-  root.dataset.sceneB = String(transition.nextIndex)
-  root.dataset.sceneContentProgress = transition.sceneProgress.toFixed(4)
-  root.dataset.leadingHoldProgress = transition.leadingHoldProgress.toFixed(4)
-  root.dataset.sceneProgress = transition.progress.toFixed(4)
-  root.dataset.sectionId = transition.sectionId ?? ''
-  root.dataset.sectionIndex = String(currentSectionIndex)
-  root.dataset.sectionProgress = transition.sectionProgress.toFixed(4)
-  root.dataset.timelineCycle = String(transition.cycleIndex)
-  root.dataset.timelinePhase = transition.phase
+  updateDataset(root, 'sceneA', transition.currentIndex)
+  updateDataset(root, 'sceneB', transition.nextIndex)
+  updateDataset(root, 'sceneContentProgress', transition.sceneProgress.toFixed(4))
+  updateDataset(root, 'leadingHoldProgress', transition.leadingHoldProgress.toFixed(4))
+  updateDataset(root, 'sceneProgress', transition.progress.toFixed(4))
+  updateDataset(root, 'sectionId', transition.sectionId ?? '')
+  updateDataset(root, 'sectionIndex', currentSectionIndex)
+  updateDataset(root, 'sectionProgress', transition.sectionProgress.toFixed(4))
+  updateDataset(root, 'timelineCycle', transition.cycleIndex)
+  updateDataset(root, 'timelinePhase', transition.phase)
 }

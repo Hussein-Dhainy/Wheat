@@ -17,7 +17,6 @@ uniform float uScrollMotionScale;
 uniform vec3 uScrollRotation;
 uniform vec3 uScrollTravel;
 uniform float uTime;
-uniform float uYaw;
 
 varying float vColorMix;
 varying float vOpacity;
@@ -74,8 +73,8 @@ void main() {
   transformedPosition.y += cos(driftTime * 0.73 + aPhase * 1.31) * 0.08;
   transformedPosition.z += sin(driftTime * 0.51 + aPhase * 0.67) * 0.06;
 
-  // Rotate the complete field slowly around its vertical axis. Scroll adds
-  // restrained motion around every axis and a reversible XYZ translation.
+  // Scroll and pointer input rotate the complete field around its anchored
+  // center and add a reversible XYZ translation.
   vec3 fieldOffset = transformedPosition - uFieldCenter;
   vec3 scrollAngles = uScrollRotation
     * uScrollProgress
@@ -89,7 +88,7 @@ void main() {
   fieldOffset = rotateX(fieldOffset, scrollAngles.x + pointerAngles.x);
   fieldOffset = rotateY(
     fieldOffset,
-    uYaw + scrollAngles.y + pointerAngles.y
+    scrollAngles.y + pointerAngles.y
   );
   fieldOffset = rotateZ(fieldOffset, scrollAngles.z + pointerAngles.z);
   transformedPosition = uFieldCenter + fieldOffset

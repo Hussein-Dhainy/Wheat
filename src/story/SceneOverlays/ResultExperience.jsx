@@ -10,6 +10,7 @@ import {
 } from '../../experience/scenes/result/resultInspection.js'
 import { TitleParticleText } from '../components/TitleParticleText/TitleParticleText.jsx'
 import styles from './SceneOverlays.module.css'
+import { isResultClosingVisible } from './resultOverlayState.js'
 import {
   BOLD_TITLE_FONT_SIZE,
   BOLD_TITLE_FONT_WEIGHT,
@@ -59,7 +60,6 @@ export function ResultExperience({
   const closingCloseRef = useRef(null)
   const closingPanelRef = useRef(null)
   const closingTriggerRefs = useRef(new Map())
-  const progressFrame = useRef(0)
   const replayFrame = useRef(0)
   const closingReplayFrame = useRef(0)
   const inspectionReplayFrame = useRef(0)
@@ -117,7 +117,9 @@ export function ResultExperience({
     if (!sceneLayer || fallback) return undefined
 
     const replayVisibleResultIntro = () => {
-      const closingVisible = Number(sceneLayer.dataset.sectionProgress ?? 0) >= 0.3
+      const closingVisible = isResultClosingVisible(
+        sceneLayer.dataset.sectionProgress,
+      )
       wasClosingVisible.current = closingVisible
 
       if (closingVisible) {
@@ -129,9 +131,10 @@ export function ResultExperience({
       }
     }
 
-    const monitorResultSection = () => {
-      const sectionProgress = Number(sceneLayer.dataset.sectionProgress ?? 0)
-      const closingVisible = sectionProgress >= 0.3
+    const updateResultSection = () => {
+      const closingVisible = isResultClosingVisible(
+        sceneLayer.dataset.sectionProgress,
+      )
 
       if (wasClosingVisible.current && !closingVisible) {
         replayTitleIntro()
@@ -141,14 +144,18 @@ export function ResultExperience({
       }
 
       wasClosingVisible.current = closingVisible
-      progressFrame.current = requestAnimationFrame(monitorResultSection)
     }
 
+    const sectionObserver = new MutationObserver(updateResultSection)
+    sectionObserver.observe(sceneLayer, {
+      attributeFilter: ['data-section-progress'],
+      attributes: true,
+    })
     sceneLayer.addEventListener(SCENE_VISIBILITY_ENTER_EVENT, replayVisibleResultIntro)
-    progressFrame.current = requestAnimationFrame(monitorResultSection)
+    updateResultSection()
 
     return () => {
-      cancelAnimationFrame(progressFrame.current)
+      sectionObserver.disconnect()
       cancelAnimationFrame(replayFrame.current)
       cancelAnimationFrame(closingReplayFrame.current)
       sceneLayer.removeEventListener(

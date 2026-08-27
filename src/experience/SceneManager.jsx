@@ -10,6 +10,10 @@ import {
 import { SCENE_TIMELINE } from '../config/sceneTimeline.js'
 import { PortalScene } from './PortalScene.jsx'
 import {
+  createOverlayUpdateSignature,
+  getCompositorRenderTargetSize,
+} from './sceneManagerPerformance.js'
+import {
   DIAGONAL_TRANSITION,
   MINIMUM_TRANSITION_PROGRESS,
   createRenderTarget,
@@ -75,6 +79,7 @@ export function SceneManager({
     root: null,
     sections: [],
   })
+  const overlayFrameCache = useRef({ root: null, signature: '' })
   const savedClearColor = useMemo(() => new Color(), [])
   const savedScissor = useMemo(() => new Vector4(), [])
   const savedViewport = useMemo(() => new Vector4(), [])
@@ -104,8 +109,10 @@ export function SceneManager({
 
   useEffect(() => {
     gl.getDrawingBufferSize(drawingBufferSize)
-    const width = Math.max(1, Math.round(drawingBufferSize.x))
-    const height = Math.max(1, Math.round(drawingBufferSize.y))
+    const { width, height } = getCompositorRenderTargetSize(
+      drawingBufferSize.x,
+      drawingBufferSize.y,
+    )
 
     renderTargetA.setSize(width, height)
     renderTargetB.setSize(width, height)
@@ -212,10 +219,24 @@ export function SceneManager({
       uniforms.uOverscan.value = DIAGONAL_TRANSITION.overscan
     }
 
-    updateOverlayLayers(overlayRootRef.current, overlayCache.current, transition)
-    if (overlayRootRef.current) {
-      overlayRootRef.current.dataset.timelinePosition = scroll.current.toFixed(4)
-      overlayRootRef.current.dataset.timelineTarget = scroll.target.toFixed(4)
+    const overlayRoot = overlayRootRef.current
+    if (overlayRoot) {
+      const overlaySignature = createOverlayUpdateSignature(scroll, transition)
+      const frameCache = overlayFrameCache.current
+
+      if (frameCache.root !== overlayRoot || frameCache.signature !== overlaySignature) {
+        updateOverlayLayers(overlayRoot, overlayCache.current, transition)
+        const timelinePosition = scroll.current.toFixed(4)
+        const timelineTarget = scroll.target.toFixed(4)
+        if (overlayRoot.dataset.timelinePosition !== timelinePosition) {
+          overlayRoot.dataset.timelinePosition = timelinePosition
+        }
+        if (overlayRoot.dataset.timelineTarget !== timelineTarget) {
+          overlayRoot.dataset.timelineTarget = timelineTarget
+        }
+        frameCache.root = overlayRoot
+        frameCache.signature = overlaySignature
+      }
     }
   }, -100)
 

@@ -6,7 +6,7 @@ import { PREDICTION_RENDER_CONFIG as CONFIG } from './predictionConfig.js'
 
 const BACKDROP = CONFIG.backdrop
 
-export function PredictionBackdrop({ children }) {
+export function PredictionBackdrop({ children, sceneStateRef }) {
   const { gl, size, viewport } = useThree()
   const [backdropScene] = useState(() => new Scene())
   const [sourceRenderTarget] = useState(() => createRenderTarget(true))
@@ -51,7 +51,7 @@ export function PredictionBackdrop({ children }) {
   }, [blurPass, horizontalBlurTarget, sourceRenderTarget, verticalBlurTarget])
 
   useFrame(({ camera }) => {
-    if (!planeRef.current) return
+    if (!planeRef.current || !sceneStateRef?.current?.isActive) return
 
     const previousRenderTarget = gl.getRenderTarget()
     const previousAutoClear = gl.autoClear

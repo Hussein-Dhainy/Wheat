@@ -33,7 +33,8 @@ export function PredictionSky({ weatherRef }) {
   }), [palettes])
 
   useFrame(({ camera }) => {
-    if (!meshRef.current) return
+    const weather = weatherRef?.current
+    if (!meshRef.current || !weather?.active) return
 
     meshRef.current.position.set(
       camera.position.x,
@@ -41,11 +42,10 @@ export function PredictionSky({ weatherRef }) {
       SKY.distance,
     )
 
-    const weather = weatherRef?.current
-    const storm = weather?.strength ?? 0
-    const drought = weather?.drought ?? 0
-    const disease = weather?.disease ?? 0
-    const lightning = weather?.lightning ?? 0
+    const storm = weather.strength ?? 0
+    const drought = weather.drought ?? 0
+    const disease = weather.disease ?? 0
+    const lightning = weather.lightning ?? 0
 
     uniforms.uTopColor.value
       .copy(palettes.base.top)

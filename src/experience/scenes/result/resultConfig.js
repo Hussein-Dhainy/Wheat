@@ -1,5 +1,5 @@
 export const RESULT_SCENE_CONFIG = {
-  modelUrl: '/models/result/HunyonWheatSeed.glb',
+  modelUrl: '/models/result/ResultSeedOptimized.glb',
   meshName: 'node_0',
   materialSourceMeshName: 'node_0',
   background: '#001510',
@@ -90,10 +90,6 @@ export const RESULT_SCENE_CONFIG = {
       // here so the composition remains anchored in the lower-left.
       fieldCenter: [-1.8, -0.8, -3.9],
       position: [0, 0, 0],
-      // A bounded continuous sway preserves the lower-left composition. An
-      // accumulating yaw eventually turns the whole field out of frame.
-      idleYawRange: 0.05,
-      idleYawSpeed: 0.16,
       // Master multiplier for pointer parallax and rotation. Scroll motion is
       // attenuated separately so a strong pointer response cannot displace
       // the field from its lower-left resting composition.

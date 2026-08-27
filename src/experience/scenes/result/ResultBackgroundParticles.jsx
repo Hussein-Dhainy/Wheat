@@ -186,7 +186,6 @@ export default function ResultBackgroundParticles({
       value: new Vector3(...CONFIG.atmosphere.backgroundParticles.scrollTravel),
     },
     uTime: { value: 0 },
-    uYaw: { value: 0 },
   }), [])
 
   useFrame(({ gl }, deltaTime) => {
@@ -204,11 +203,6 @@ export default function ResultBackgroundParticles({
     materialReference.current.uniforms.uTime.value = reducedMotion
       ? 0
       : activeTime.current
-    materialReference.current.uniforms.uYaw.value = reducedMotion
-      ? 0
-      : Math.sin(
-        activeTime.current * CONFIG.atmosphere.backgroundParticles.idleYawSpeed,
-      ) * CONFIG.atmosphere.backgroundParticles.idleYawRange
 
     const pointer = pointerRef?.current
     const targetPointerX = reducedMotion ? 0 : pointer?.ndcX ?? 0

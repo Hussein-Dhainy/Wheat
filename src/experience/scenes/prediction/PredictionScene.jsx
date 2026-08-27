@@ -611,7 +611,7 @@ export function PredictionScene({
 
   return (
     <>
-      <PredictionBackdrop>
+      <PredictionBackdrop sceneStateRef={sceneStateRef}>
         <color ref={backgroundColorRef} attach="background" args={[background]} />
         <PredictionSky weatherRef={weatherRef} />
         <hemisphereLight

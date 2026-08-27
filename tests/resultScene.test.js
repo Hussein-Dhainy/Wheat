@@ -39,10 +39,10 @@ test('closing controls have unique labels and remain content-driven', () => {
   )))
 })
 
-test('the result uses the Hunyon wheat seed model', () => {
+test('the result uses the optimized wheat seed model', () => {
   assert.equal(
     RESULT_SCENE_CONFIG.modelUrl,
-    '/models/result/HunyonWheatSeed.glb',
+    '/models/result/ResultSeedOptimized.glb',
   )
   assert.equal(RESULT_SCENE_CONFIG.meshName, 'node_0')
   assert.equal(RESULT_SCENE_CONFIG.materialSourceMeshName, 'node_0')

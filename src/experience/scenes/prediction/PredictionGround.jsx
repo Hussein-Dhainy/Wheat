@@ -57,10 +57,11 @@ export function PredictionGround({ weatherRef }) {
   }, [colorMap, displacementMap, gl, normalMap, roughnessMap])
 
   useFrame(() => {
-    if (!materialRef.current) return
-    const weatherStrength = weatherRef?.current?.strength ?? 0
-    const droughtStrength = weatherRef?.current?.drought ?? 0
-    const diseaseStrength = weatherRef?.current?.disease ?? 0
+    const weather = weatherRef?.current
+    if (!materialRef.current || !weather?.active) return
+    const weatherStrength = weather.strength ?? 0
+    const droughtStrength = weather.drought ?? 0
+    const diseaseStrength = weather.disease ?? 0
     colors.display
       .copy(colors.base)
       .lerp(colors.storm, weatherStrength)

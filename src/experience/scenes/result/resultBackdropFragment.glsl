@@ -12,7 +12,9 @@ float hash21(vec2 point) {
 float valueNoise(vec2 point) {
   vec2 cell = floor(point);
   vec2 local = fract(point);
-  local = local * local * (3.0 - 2.0 * local);
+  // Quintic interpolation keeps both the slope and curvature smooth where
+  // lattice cells meet, preventing their boundaries from reading as lines.
+  local = local * local * local * (local * (local * 6.0 - 15.0) + 10.0);
 
   float bottomLeft = hash21(cell);
   float bottomRight = hash21(cell + vec2(1.0, 0.0));
@@ -25,10 +27,33 @@ float valueNoise(vec2 point) {
   );
 }
 
+vec2 rotateNoiseDomain(vec2 point, vec2 axis) {
+  return vec2(
+    point.x * axis.x - point.y * axis.y,
+    point.x * axis.y + point.y * axis.x
+  );
+}
+
 float softHaze(vec2 point) {
-  float haze = valueNoise(point) * 0.57;
-  haze += valueNoise(point * 2.03 + 4.7) * 0.29;
-  haze += valueNoise(point * 4.11 + 9.2) * 0.14;
+  // Each octave uses a different rotation and offset. This prevents the
+  // square noise lattices from lining up into a coherent vertical boundary
+  // as the haze domain drifts across the screen.
+  vec2 broadDomain = rotateNoiseDomain(
+    point,
+    vec2(0.9063, 0.4226)
+  ) + vec2(1.7, -2.9);
+  vec2 mediumDomain = rotateNoiseDomain(
+    point * 2.03,
+    vec2(0.7986, -0.6018)
+  ) + vec2(4.7, 1.3);
+  vec2 fineDomain = rotateNoiseDomain(
+    point * 4.11,
+    vec2(0.3746, 0.9272)
+  ) + vec2(9.2, -3.8);
+
+  float haze = valueNoise(broadDomain) * 0.57;
+  haze += valueNoise(mediumDomain) * 0.29;
+  haze += valueNoise(fineDomain) * 0.14;
   return haze;
 }
 
