@@ -7,8 +7,8 @@ const CAMERA_TARGET = new Vector3(0, 0, 0)
 // Edit these values to tune the cursor-driven parallax.
 const DNA_CAMERA = {
   dampSpeed: 2,
-  horizontalRange: 2.5,
-  verticalRange: 0.7,
+  horizontalRange: 3.5,
+  verticalRange: 1,
 }
 
 export function DNACameraRig({

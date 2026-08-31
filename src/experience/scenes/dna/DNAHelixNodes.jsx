@@ -112,7 +112,11 @@ function createLinkGeometry() {
   }
 }
 
-export default function DNAHelixNodes({ reducedMotion, sceneStateRef }) {
+export default function DNAHelixNodes({
+  sceneOpacityRef,
+  reducedMotion,
+  sceneStateRef,
+}) {
   const activeTime = useRef(0)
   const groupReference = useRef()
   const nodeMaterialReference = useRef()
@@ -123,6 +127,7 @@ export default function DNAHelixNodes({ reducedMotion, sceneStateRef }) {
   const nodeUniforms = useMemo(() => ({
     uCyan: { value: new Color(DNA_RENDER_CONFIG.colors.helixNodeCyan) },
     uPixelRatio: { value: 1 },
+    uSceneOpacity: { value: 1 },
     uTime: { value: 0 },
     uYellow: { value: new Color(DNA_RENDER_CONFIG.colors.helixNodeYellow) },
   }), [])
@@ -133,6 +138,7 @@ export default function DNAHelixNodes({ reducedMotion, sceneStateRef }) {
     uMaximumSize: { value: DNA_RENDER_CONFIG.halos.nodes.maximumSize },
     uPixelRatio: { value: 1 },
     uPulseAmount: { value: DNA_RENDER_CONFIG.halos.nodes.pulseAmount },
+    uSceneOpacity: { value: 1 },
     uSizeScale: { value: DNA_RENDER_CONFIG.halos.nodes.sizeScale },
     uTime: { value: 0 },
     uYellow: { value: new Color(DNA_RENDER_CONFIG.colors.helixNodeYellow) },
@@ -140,6 +146,7 @@ export default function DNAHelixNodes({ reducedMotion, sceneStateRef }) {
   const linkUniforms = useMemo(() => ({
     uColor: { value: new Color('#70cdb1') },
     uPixelRatio: { value: 1 },
+    uSceneOpacity: { value: 1 },
   }), [])
 
   useEffect(() => {
@@ -171,11 +178,17 @@ export default function DNAHelixNodes({ reducedMotion, sceneStateRef }) {
     groupReference.current.rotation.y = time * IDLE_ROTATION_SPEED
       + progress * SCROLL_ROTATION
     const pixelRatio = gl.getPixelRatio()
+    // DNAHelix owns this value so the nodes fade on exactly the same curve as
+    // the ribbon and particles when the genetics detail opens.
+    const sceneOpacity = sceneOpacityRef?.current ?? 1
     nodeMaterialReference.current.uniforms.uPixelRatio.value = pixelRatio
+    nodeMaterialReference.current.uniforms.uSceneOpacity.value = sceneOpacity
     nodeMaterialReference.current.uniforms.uTime.value = time
     nodeHaloMaterialReference.current.uniforms.uPixelRatio.value = pixelRatio
+    nodeHaloMaterialReference.current.uniforms.uSceneOpacity.value = sceneOpacity
     nodeHaloMaterialReference.current.uniforms.uTime.value = time
     linkMaterialReference.current.uniforms.uPixelRatio.value = pixelRatio
+    linkMaterialReference.current.uniforms.uSceneOpacity.value = sceneOpacity
   })
 
   return (

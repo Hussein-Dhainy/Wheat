@@ -1,6 +1,7 @@
 precision highp float;
 
 uniform vec3 uCyan;
+uniform float uSceneOpacity;
 uniform vec3 uYellow;
 
 varying float vColorMix;
@@ -13,7 +14,7 @@ void main() {
   float core = 1.0 - smoothstep(0.0, 0.48, radius);
   vec3 color = mix(uCyan, uYellow, vColorMix);
   color *= 0.84 + core * 0.46;
-  float alpha = halo * 0.18 + body * 0.82;
+  float alpha = (halo * 0.18 + body * 0.82) * uSceneOpacity;
 
   if (alpha < 0.008) discard;
   gl_FragColor = vec4(color, alpha);

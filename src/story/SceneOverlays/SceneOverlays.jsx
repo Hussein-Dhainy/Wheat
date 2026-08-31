@@ -7,6 +7,7 @@ import styles from './SceneOverlays.module.css'
 export function SceneOverlays({
   entered,
   fallback,
+  geneticsDetailOpen,
   overlayRootRef,
   predictionTestsOpen,
   resultInspectionOpen,
@@ -16,6 +17,7 @@ export function SceneOverlays({
   selectedResultClosingAction,
   selectedResultView,
   setPredictionTestsOpen,
+  setGeneticsDetailOpen,
   setResultInspectionOpen,
   setSelectedGeneticsSeed,
   setSelectedPredictionCondition,
@@ -67,6 +69,7 @@ export function SceneOverlays({
                   key={section.id}
                   entry={entry}
                   fallback={fallback}
+                  geneticsDetailOpen={geneticsDetailOpen}
                   index={index}
                   section={section}
                   sectionCount={configuredSections.length}
@@ -79,6 +82,7 @@ export function SceneOverlays({
                   selectedResultClosingAction={selectedResultClosingAction}
                   selectedResultView={selectedResultView}
                   setPredictionTestsOpen={setPredictionTestsOpen}
+                  setGeneticsDetailOpen={setGeneticsDetailOpen}
                   setResultInspectionOpen={setResultInspectionOpen}
                   setSelectedGeneticsSeed={setSelectedGeneticsSeed}
                   setSelectedPredictionCondition={setSelectedPredictionCondition}

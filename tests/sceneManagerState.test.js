@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   COMPOSITOR_RENDER_SCALE,
   createOverlayUpdateSignature,
+  createWarmupTracker,
   getCompositorRenderTargetSize,
 } from '../src/experience/sceneManagerPerformance.js'
 
@@ -60,4 +61,20 @@ test('compositor render targets use the configured conservative scale', () => {
     getCompositorRenderTargetSize(0, 0),
     { width: 1, height: 1 },
   )
+})
+
+test('preloader warm-up waits for main scenes and the private prediction backdrop', () => {
+  let completionCount = 0
+  const tracker = createWarmupTracker(
+    ['main-scenes', 'prediction-backdrop'],
+    () => { completionCount += 1 },
+  )
+
+  assert.equal(tracker.markComplete('main-scenes'), false)
+  assert.equal(completionCount, 0)
+  assert.equal(tracker.markComplete('main-scenes'), false)
+  assert.equal(tracker.markComplete('prediction-backdrop'), true)
+  assert.equal(completionCount, 1)
+  assert.equal(tracker.markComplete('prediction-backdrop'), false)
+  assert.equal(completionCount, 1)
 })

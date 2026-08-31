@@ -41,6 +41,7 @@ export function App() {
   const [selectedGeneticsSeed, setSelectedGeneticsSeed] = useState(
     DEFAULT_GENETICS_SEED_ID,
   )
+  const [geneticsDetailOpen, setGeneticsDetailOpen] = useState(false)
   const [predictionTestsOpen, setPredictionTestsOpen] = useState(false)
   const [selectedPredictionCondition, setSelectedPredictionCondition] = useState(
     DEFAULT_PREDICTION_CONDITION_ID,
@@ -62,6 +63,7 @@ export function App() {
   const virtualScrollRef = useVirtualSceneScroll({
     enabled: landingEntered
       && !webglFallback
+      && !geneticsDetailOpen
       && !resultInspectionOpen
       && !menuOpen
       && selectedResultClosingAction === null,
@@ -76,6 +78,7 @@ export function App() {
   const handleCloseMenu = useCallback(() => setMenuOpen(false), [])
   const handleNavigateToScene = useCallback((sceneId) => {
     setMenuOpen(false)
+    setGeneticsDetailOpen(false)
     jumpVirtualScrollToPosition(
       virtualScrollRef.current,
       getNearestSceneStartPosition(
@@ -85,7 +88,6 @@ export function App() {
       ),
     )
   }, [virtualScrollRef])
-
   useEffect(() => {
     document.body.classList.toggle('webgl-fallback-mode', webglFallback)
     return () => document.body.classList.remove('webgl-fallback-mode')
@@ -135,6 +137,7 @@ export function App() {
       <div className={`scene-layer ${menuOpen ? 'menu-open' : ''}`}>
         <ExperienceCanvas
           entered={landingEntered}
+          geneticsDetailOpen={geneticsDetailOpen}
           onReady={handleCanvasReady}
           onSelectGeneticsSeed={setSelectedGeneticsSeed}
           onWarmupComplete={handleWarmupComplete}
@@ -153,6 +156,7 @@ export function App() {
         <SceneOverlays
           entered={landingEntered}
           fallback={webglFallback}
+          geneticsDetailOpen={geneticsDetailOpen}
           overlayRootRef={overlayRootRef}
           predictionTestsOpen={predictionTestsOpen}
           resultInspectionOpen={resultInspectionOpen}
@@ -165,6 +169,7 @@ export function App() {
           setSelectedResultClosingAction={setSelectedResultClosingAction}
           setSelectedResultView={setSelectedResultView}
           setPredictionTestsOpen={setPredictionTestsOpen}
+          setGeneticsDetailOpen={setGeneticsDetailOpen}
           setSelectedGeneticsSeed={setSelectedGeneticsSeed}
           setSelectedPredictionCondition={setSelectedPredictionCondition}
         />

@@ -4,6 +4,7 @@ import { SceneManager } from './SceneManager.jsx'
 
 export function ExperienceCanvas({
   entered,
+  geneticsDetailOpen,
   onReady,
   onSelectGeneticsSeed,
   onWarmupComplete,
@@ -38,6 +39,7 @@ export function ExperienceCanvas({
       >
         <SceneManager
           entered={entered}
+          geneticsDetailOpen={geneticsDetailOpen}
           onSelectGeneticsSeed={onSelectGeneticsSeed}
           onWarmupComplete={onWarmupComplete}
           overlayRootRef={overlayRootRef}

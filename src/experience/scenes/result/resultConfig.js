@@ -1,7 +1,11 @@
+import { WHEAT_GRAIN_ASSET } from '../../systems/wheatGrain.js'
+
 export const RESULT_SCENE_CONFIG = {
-  modelUrl: '/models/result/ResultSeedOptimized.glb',
-  meshName: 'node_0',
-  materialSourceMeshName: 'node_0',
+  // The grain model, its mesh names, and its material tuning are shared with
+  // Scene 2's genetics detail — see systems/wheatGrain.js.
+  modelUrl: WHEAT_GRAIN_ASSET.modelUrl,
+  meshName: WHEAT_GRAIN_ASSET.meshName,
+  materialSourceMeshName: WHEAT_GRAIN_ASSET.materialSourceMeshName,
   background: '#001510',
   camera: {
     fov: 40,
@@ -27,12 +31,13 @@ export const RESULT_SCENE_CONFIG = {
     // closing actions land.
     travelRange: 3.5,
     travelProgressRange: [0, 0.8],
-    baseRotation: [-0.05, -0.42, 0],
+    baseRotation: WHEAT_GRAIN_ASSET.baseRotation,
   },
   inspection: {
     // Begin with the result button's exit and unfold slowly enough to read as
     // one continuous move instead of a sudden zoom after the button vanishes.
     transitionDamping: 1.4,
+    grainZoom: 1.08,
     particleZoom: 3.15,
     particleCameraTravel: 3.25,
     particleFadeRange: [0.32, 0.9],
@@ -55,20 +60,7 @@ export const RESULT_SCENE_CONFIG = {
       color: '#f6fbf8',
     },
   },
-  material: {
-    colorTint: '#f4f0e6',
-    emissive: '#554414',
-    emissiveIntensity: 0.12,
-    // The source GLB carries an unusually strong specular extension and a
-    // combined metallic/roughness map. Override both so the grain reads as a
-    // dry organic surface rather than polished or metallic material.
-    metalness: 0,
-    roughness: 1,
-    specularIntensity: 0.15,
-    clearcoat: 0,
-    sheen: 0,
-    normalScale: 1,
-  },
+  material: WHEAT_GRAIN_ASSET.material,
   lighting: {
     // Only the grain uses a light-reactive PBR material in this scene; the
     // backdrop and particle systems are shader-driven. This ambient fill

@@ -85,6 +85,7 @@ function prepareHeroPlant(scene) {
 
 export function PredictionScene({
   background,
+  onSceneWarmupComplete,
   pointerRef,
   predictionTestsOpen,
   quality,
@@ -611,7 +612,10 @@ export function PredictionScene({
 
   return (
     <>
-      <PredictionBackdrop sceneStateRef={sceneStateRef}>
+      <PredictionBackdrop
+        onWarmupComplete={onSceneWarmupComplete}
+        sceneStateRef={sceneStateRef}
+      >
         <color ref={backgroundColorRef} attach="background" args={[background]} />
         <PredictionSky weatherRef={weatherRef} />
         <hemisphereLight

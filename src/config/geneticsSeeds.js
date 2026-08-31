@@ -34,3 +34,30 @@ export const DEFAULT_GENETICS_SEED_ID = 'closed'
 export const GENETICS_SEED_TIMING = {
   carouselRevealRange: [0.8, 1],
 }
+
+export const GENETICS_INTRO_TIMING = {
+  activeRange: [0, 0.4],
+}
+
+export function isGeneticsIntroActive(progress) {
+  const [, end] = GENETICS_INTRO_TIMING.activeRange
+  return progress < end
+}
+
+export function crossedIntoGeneticsIntro(previousProgress, progress) {
+  const [, end] = GENETICS_INTRO_TIMING.activeRange
+  return Number.isFinite(previousProgress)
+    && previousProgress >= end
+    && progress < end
+}
+
+// Scene 2's DNA introduction clears near 40%, while the selectable seed views
+// do not begin until 80%. This editorial beat owns the space between them.
+export const GENETICS_BRIDGE_TIMING = {
+  activeRange: [0.38, 0.74],
+}
+
+export function isGeneticsBridgeActive(progress) {
+  const [start, end] = GENETICS_BRIDGE_TIMING.activeRange
+  return progress >= start && progress < end
+}

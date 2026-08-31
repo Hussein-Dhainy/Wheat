@@ -1,3 +1,5 @@
+import { WHEAT_GRAIN_ASSET } from '../../systems/wheatGrain.js'
+
 export const DNA_RENDER_CONFIG = {
   transitionTravel: 1.4,
   entry: {
@@ -13,6 +15,32 @@ export const DNA_RENDER_CONFIG = {
     revealSoftness: 0.54,
     // Total Y-axis turn performed while the DNA settles into place.
     rotation: Math.PI * 0.85,
+  },
+  // The "Explore the strands" reveal: the helix flies past the camera while
+  // the shared wheat grain (systems/wheatGrain.js) scales up in its place.
+  detail: {
+    // Damping rate for the whole reveal — DNAHelix's fly-past and the grain's
+    // scale-up both run off this one mix, so they stay locked together. Lower
+    // is slower: the mix settles in roughly 3 / transitionDamping seconds.
+    transitionDamping: 1.2,
+    dnaScale: 3.4,
+    dnaTravel: [0.15, 0.2, 6.4],
+    dnaFadeRange: [0.12, 0.7],
+    grainRevealRange: [0.38, 0.95],
+    grain: {
+      // Where the grain sits as a fraction of the viewport, measured from the
+      // top-left. These track .geneticsDetailRings in SceneOverlays.module.css
+      // (left 27.5%/50%, top 50%/66%) so the grain stays centred inside the
+      // rings at every aspect ratio rather than only at the one these numbers
+      // were eyeballed on. Keep the two in sync.
+      desktopAnchor: [0.275, 0.5],
+      desktopScale: 0.72,
+      mobileAnchor: [0.5, 0.66],
+      mobileScale: 0.72,
+      depth: 1,
+      rotation: WHEAT_GRAIN_ASSET.baseRotation,
+      rotationSpeed: 0.16,
+    },
   },
   background: {
     // Null colors resolve to DNAHelix's `background` prop. This lets the

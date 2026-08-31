@@ -1,5 +1,21 @@
 export const COMPOSITOR_RENDER_SCALE = 0.85
 
+export function createWarmupTracker(requiredStages, onComplete) {
+  const pendingStages = new Set(requiredStages)
+  let completionReported = false
+
+  return {
+    markComplete(stage) {
+      if (!pendingStages.delete(stage)) return false
+      if (pendingStages.size > 0 || completionReported) return false
+
+      completionReported = true
+      onComplete?.()
+      return true
+    },
+  }
+}
+
 function formatOverlayNumber(value) {
   return Number.isFinite(value) ? value.toFixed(4) : '0.0000'
 }

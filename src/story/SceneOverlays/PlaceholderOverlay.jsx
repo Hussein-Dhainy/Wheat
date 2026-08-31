@@ -4,6 +4,8 @@ import {
 } from '../../config/geneticsSeeds.js'
 import { TitleParticleText } from '../components/TitleParticleText/TitleParticleText.jsx'
 import { FieldIntro } from './FieldIntro.jsx'
+import { GeneticsBridgeTitle } from './GeneticsBridgeTitle.jsx'
+import { GeneticsIntro } from './GeneticsIntro.jsx'
 import { PredictionIntro } from './PredictionIntro.jsx'
 import { ResultExperience } from './ResultExperience.jsx'
 import {
@@ -19,6 +21,7 @@ import styles from './SceneOverlays.module.css'
 export function PlaceholderOverlay({
   entry,
   fallback,
+  geneticsDetailOpen,
   index,
   section,
   sectionCount,
@@ -31,6 +34,7 @@ export function PlaceholderOverlay({
   selectedResultClosingAction,
   selectedResultView,
   setPredictionTestsOpen,
+  setGeneticsDetailOpen,
   setResultInspectionOpen,
   setSelectedGeneticsSeed,
   setSelectedPredictionCondition,
@@ -66,7 +70,9 @@ export function PlaceholderOverlay({
         ? undefined
         : entry.id !== 'genetics'
           ? titleId
-          : 'genetics-seed-title'}
+          : geneticsDetailOpen
+            ? 'genetics-detail-title'
+            : 'genetics-title'}
       aria-hidden={fallback ? false : sectionIndex !== 0}
       inert={fallback ? false : sectionIndex !== 0}
     >
@@ -114,27 +120,37 @@ export function PlaceholderOverlay({
       )}
 
       {entry.id === 'genetics' && (
-        <div className={styles.seedSelector}>
-          <div className={styles.seedCopy}>
-            <p className={styles.eyebrow}>Explore the candidates</p>
-            <h2 id="genetics-seed-title">{selectedSeed.label}</h2>
-            <p aria-live="polite">{selectedSeed.description}</p>
-          </div>
+        <>
+          <GeneticsIntro
+            fallback={fallback}
+            geneticsDetailOpen={geneticsDetailOpen}
+            setGeneticsDetailOpen={setGeneticsDetailOpen}
+          />
 
-          <div className={styles.seedOptions} aria-label="Seed views">
-            {GENETICS_SEED_OPTIONS.map((option, optionIndex) => (
-              <button
-                key={option.id}
-                type="button"
-                aria-pressed={option.id === selectedSeed.id}
-                onClick={() => setSelectedGeneticsSeed(option.id)}
-              >
-                <span>{String(optionIndex + 1).padStart(2, '0')}</span>
-                {option.label}
-              </button>
-            ))}
+          <GeneticsBridgeTitle fallback={fallback} />
+
+          <div className={styles.seedSelector}>
+            <div className={styles.seedCopy}>
+              <p className={styles.eyebrow}>Explore the candidates</p>
+              <h3>{selectedSeed.label}</h3>
+              <p aria-live="polite">{selectedSeed.description}</p>
+            </div>
+
+            <div className={styles.seedOptions} aria-label="Seed views">
+              {GENETICS_SEED_OPTIONS.map((option, optionIndex) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  aria-pressed={option.id === selectedSeed.id}
+                  onClick={() => setSelectedGeneticsSeed(option.id)}
+                >
+                  <span>{String(optionIndex + 1).padStart(2, '0')}</span>
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {entry.id === 'prediction' && (

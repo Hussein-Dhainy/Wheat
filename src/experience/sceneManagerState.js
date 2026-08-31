@@ -1,5 +1,10 @@
 import { LinearFilter, WebGLRenderTarget } from 'three'
-import { GENETICS_SEED_TIMING } from '../config/geneticsSeeds.js'
+import {
+  crossedIntoGeneticsIntro,
+  GENETICS_SEED_TIMING,
+  isGeneticsBridgeActive,
+  isGeneticsIntroActive,
+} from '../config/geneticsSeeds.js'
 import { getDiagonalBounds } from './sceneMath.js'
 import {
   applyIncomingSceneMotion,
@@ -18,6 +23,9 @@ const SCENE_VISIBILITY_EXIT_THRESHOLD = 0.001
 export const MINIMUM_TRANSITION_PROGRESS = 1e-6
 export const SCENE_DOMINANCE_EXIT_EVENT = 'wheat:scene-dominance-exit'
 export const SCENE_VISIBILITY_ENTER_EVENT = 'wheat:scene-visibility-enter'
+export const GENETICS_BRIDGE_ENTER_EVENT = 'wheat:genetics-bridge-enter'
+export const GENETICS_BRIDGE_EXIT_EVENT = 'wheat:genetics-bridge-exit'
+export const GENETICS_INTRO_ENTER_EVENT = 'wheat:genetics-intro-enter'
 
 export function createRenderTarget(name) {
   const target = new WebGLRenderTarget(1, 1, {
@@ -310,11 +318,71 @@ export function updateOverlayLayers(root, cache, transition) {
   )
 
   layers.forEach((layer, index) => {
+    const isCurrentGeneticsScene = index === transition.currentIndex
+      && SCENE_REGISTRY[index].id === 'genetics'
+    const geneticsIntroIsActive = isCurrentGeneticsScene
+      && isGeneticsIntroActive(transition.sceneProgress)
+    updateDataset(
+      layer,
+      'geneticsIntroActive',
+      geneticsIntroIsActive ? 'true' : 'false',
+    )
+    const previousGeneticsProgress = Number.parseFloat(
+      layer.dataset.geneticsIntroProgress,
+    )
+    // Full scene entry already replays through SCENE_VISIBILITY_ENTER_EVENT.
+    // This explicit high -> low boundary crossing only captures re-entry from
+    // the middle genetics beat, which otherwise merely restores CSS opacity.
+    if (
+      isCurrentGeneticsScene
+      && crossedIntoGeneticsIntro(
+        previousGeneticsProgress,
+        transition.sceneProgress,
+      )
+    ) {
+      layer.dispatchEvent(new CustomEvent(GENETICS_INTRO_ENTER_EVENT, {
+        detail: {
+          progress: transition.sceneProgress,
+          sceneId: SCENE_REGISTRY[index].id,
+          sceneIndex: index,
+        },
+      }))
+    }
+    updateDataset(
+      layer,
+      'geneticsIntroProgress',
+      isCurrentGeneticsScene ? transition.sceneProgress : '',
+    )
+
+    const geneticsBridgeWasActive = (
+      layer.dataset.geneticsBridgeActive === 'true'
+    )
+    const geneticsBridgeIsActive = isCurrentGeneticsScene
+      && isGeneticsBridgeActive(transition.sceneProgress)
+    updateDataset(
+      layer,
+      'geneticsBridgeActive',
+      geneticsBridgeIsActive ? 'true' : 'false',
+    )
+    if (geneticsBridgeIsActive !== geneticsBridgeWasActive) {
+      layer.dispatchEvent(new CustomEvent(
+        geneticsBridgeIsActive
+          ? GENETICS_BRIDGE_ENTER_EVENT
+          : GENETICS_BRIDGE_EXIT_EVENT,
+        {
+          detail: {
+            progress: transition.sceneProgress,
+            sceneId: SCENE_REGISTRY[index].id,
+            sceneIndex: index,
+          },
+        },
+      ))
+    }
+
     const [carouselStart, carouselEnd] = (
       GENETICS_SEED_TIMING.carouselRevealRange
     )
-    const carouselProgress = index === transition.currentIndex
-      && SCENE_REGISTRY[index].id === 'genetics'
+    const carouselProgress = isCurrentGeneticsScene
       ? Math.max(
         0,
         Math.min(
@@ -324,8 +392,7 @@ export function updateOverlayLayers(root, cache, transition) {
         ),
       )
       : 0
-    const carouselIsActive = index === transition.currentIndex
-      && SCENE_REGISTRY[index].id === 'genetics'
+    const carouselIsActive = isCurrentGeneticsScene
       && transition.sceneProgress >= carouselStart
     updateDataset(
       layer,

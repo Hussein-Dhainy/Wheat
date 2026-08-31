@@ -7,9 +7,9 @@ import { SCENE_TIMELINE } from '../src/config/sceneTimeline.js'
 import { RESULT_SCENE_CONFIG } from '../src/experience/scenes/result/resultConfig.js'
 import {
   createNetworkData,
-  prepareMaterial,
   smootherRange,
 } from '../src/experience/scenes/result/resultGeometry.js'
+import { prepareGrainMaterial } from '../src/experience/systems/wheatGrain.js'
 import {
   getNearestResultViewRotation,
   getResultOrbitMarkerAngle,
@@ -59,7 +59,7 @@ test('the result grain overrides imported shine with a matte organic material', 
   source.metalnessMap = {}
   source.roughnessMap = {}
 
-  const material = prepareMaterial({ material: source })
+  const material = prepareGrainMaterial({ material: source })
 
   assert.equal(RESULT_SCENE_CONFIG.material.colorTint, '#f4f0e6')
   assert.equal(material.metalness, 0)
@@ -96,6 +96,8 @@ test('grain inspection exposes three content-driven views', () => {
 
 test('grain inspection uses a deliberately slow visual transition', () => {
   assert.equal(RESULT_SCENE_CONFIG.inspection.transitionDamping, 1.4)
+  assert.ok(RESULT_SCENE_CONFIG.inspection.grainZoom > 1)
+  assert.ok(RESULT_SCENE_CONFIG.inspection.grainZoom <= 1.1)
 })
 
 test('grain rotation snaps to the closest of three repeatable views', () => {

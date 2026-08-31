@@ -45,6 +45,7 @@ test('field layouts stay deterministic and honor the reduced LOD population', ()
   const first = createFieldLayouts()
   const second = createFieldLayouts()
 
+  assert.deepEqual(CONFIG.field.layers.map((layer) => layer.count), [110, 48, 14])
   assert.equal(first.length, CONFIG.field.layers.length)
   first.forEach((layouts, layerIndex) => {
     assert.equal(layouts.length, CONFIG.field.layers[layerIndex].count)

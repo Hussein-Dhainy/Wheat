@@ -19,6 +19,7 @@ import dnaVertexShader from './dnaVertex.glsl?raw'
 import DNABackgroundParticles from './DNABackgroundParticles.jsx'
 import DNABokehParticles from './DNABokehParticles.jsx'
 import DNAFallingSeeds from './DNAFallingSeeds.jsx'
+import DNAGeneticsDetail from './DNAGeneticsDetail.jsx'
 import DNAHaze from './DNAHaze.jsx'
 import DNAHelixNodes from './DNAHelixNodes.jsx'
 import DNAParticleTrails from './DNAParticleTrails.jsx'
@@ -60,6 +61,7 @@ function applyBackgroundPalette(target, stops, progress) {
 
 export default function DNAHelix({
   background = '#160904',
+  geneticsDetailOpen,
   onSelectGeneticsSeed,
   pointerRef,
   reducedMotion,
@@ -67,11 +69,16 @@ export default function DNAHelix({
   selectedGeneticsSeed,
 }) {
   const dnaReference = useRef()
+  const dnaDetailTransitionReference = useRef()
   const backgroundReference = useRef()
   const haloMaterialReference = useRef()
   const ribbonMaterialReference = useRef()
   const particleMaterialReference = useRef()
   const entryParticleFlow = useRef(0)
+  const detailMix = useRef(0)
+  // Shared with DNAHelixNodes, which renders its own materials but has to fade
+  // out on the same curve as the ribbon and particles.
+  const detailOpacity = useRef(1)
   const scrollRotationProgress = useRef(0)
   const idleRotation = useRef(0)
   const renderResolution = useRef(new Vector2(1, 1))
@@ -219,6 +226,10 @@ export default function DNAHelix({
 
     if (!sceneState.isActive) {
       entryParticleFlow.current = 0
+      detailMix.current = 0
+      // Matches the reset mix above, so the nodes come back fully opaque
+      // rather than mid-fade if the scene is left with the detail open.
+      detailOpacity.current = 1
       scrollRotationProgress.current = 0
       if (haloMaterialReference.current) {
         haloMaterialReference.current.uniforms.uSceneOpacity.value = 0
@@ -248,6 +259,32 @@ export default function DNAHelix({
       1,
       Math.max(0, sceneState.visibility ?? 0),
     )
+    const detailTarget = geneticsDetailOpen ? 1 : 0
+    detailMix.current = reducedMotion
+      ? detailTarget
+      : MathUtils.damp(
+          detailMix.current,
+          detailTarget,
+          DNA_RENDER_CONFIG.detail.transitionDamping,
+          deltaTime,
+        )
+    const detailProgress = MathUtils.smootherstep(detailMix.current, 0, 1)
+    const detailFade = 1 - MathUtils.smoothstep(
+      detailMix.current,
+      DNA_RENDER_CONFIG.detail.dnaFadeRange[0],
+      DNA_RENDER_CONFIG.detail.dnaFadeRange[1],
+    )
+    detailOpacity.current = detailFade
+    if (dnaDetailTransitionReference.current) {
+      dnaDetailTransitionReference.current.position.set(
+        DNA_RENDER_CONFIG.detail.dnaTravel[0] * detailProgress,
+        DNA_RENDER_CONFIG.detail.dnaTravel[1] * detailProgress,
+        DNA_RENDER_CONFIG.detail.dnaTravel[2] * detailProgress,
+      )
+      dnaDetailTransitionReference.current.scale.setScalar(
+        MathUtils.lerp(1, DNA_RENDER_CONFIG.detail.dnaScale, detailProgress),
+      )
+    }
     // The Scene 1/2 handoff owns the entry twist. Once genetics content has
     // begun (or Scene 2 is re-entering from Scene 3), the twist stays fully
     // settled. This single scroll-derived value is exactly reversible.
@@ -341,19 +378,19 @@ export default function DNAHelix({
     // only the memoized definitions can leave the rendered opacity at its
     // initial value of zero.
     if (haloMaterialReference.current) {
-      haloMaterialReference.current.uniforms.uSceneOpacity.value = 1
+      haloMaterialReference.current.uniforms.uSceneOpacity.value = detailFade
       haloMaterialReference.current.uniforms.uSceneRevealProgress.value = (
         entryRevealProgress
       )
     }
     if (ribbonMaterialReference.current) {
-      ribbonMaterialReference.current.uniforms.uSceneOpacity.value = 1
+      ribbonMaterialReference.current.uniforms.uSceneOpacity.value = detailFade
       ribbonMaterialReference.current.uniforms.uSceneRevealProgress.value = (
         entryRevealProgress
       )
     }
     if (particleMaterialReference.current) {
-      particleMaterialReference.current.uniforms.uSceneOpacity.value = 1
+      particleMaterialReference.current.uniforms.uSceneOpacity.value = detailFade
       particleMaterialReference.current.uniforms.uSceneRevealProgress.value = (
         entryRevealProgress
       )
@@ -386,10 +423,6 @@ export default function DNAHelix({
         reducedMotion={reducedMotion}
         sceneStateRef={sceneStateRef}
       />
-      <DNAHelixNodes
-        reducedMotion={reducedMotion}
-        sceneStateRef={sceneStateRef}
-      />
       <Suspense fallback={null}>
         <DNAFallingSeeds
           onSelectSeed={onSelectGeneticsSeed}
@@ -397,60 +430,73 @@ export default function DNAHelix({
           sceneStateRef={sceneStateRef}
           selectedSeedId={selectedGeneticsSeed}
         />
+        <DNAGeneticsDetail
+          geneticsDetailOpen={geneticsDetailOpen}
+          reducedMotion={reducedMotion}
+          sceneStateRef={sceneStateRef}
+        />
       </Suspense>
 
-      <group ref={dnaReference}>
-        <mesh
-          geometry={geometries.ribbonGeometry}
-          frustumCulled={false}
-          renderOrder={0}
-        >
-          <shaderMaterial
-            ref={haloMaterialReference}
-            defines={{ LIGHT_SPOT_COUNT: lightSpots.positions.length }}
-            uniforms={haloUniforms}
-            vertexShader={dnaVertexShader}
-            fragmentShader={dnaHaloFragmentShader}
-            blending={AdditiveBlending}
-            depthWrite={false}
-            side={DoubleSide}
-            transparent
-          />
-        </mesh>
+      {/* Everything inside travels past the camera when the detail opens. */}
+      <group ref={dnaDetailTransitionReference}>
+        <DNAHelixNodes
+          reducedMotion={reducedMotion}
+          sceneOpacityRef={detailOpacity}
+          sceneStateRef={sceneStateRef}
+        />
+        <group ref={dnaReference}>
+          <mesh
+            geometry={geometries.ribbonGeometry}
+            frustumCulled={false}
+            renderOrder={0}
+          >
+            <shaderMaterial
+              ref={haloMaterialReference}
+              defines={{ LIGHT_SPOT_COUNT: lightSpots.positions.length }}
+              uniforms={haloUniforms}
+              vertexShader={dnaVertexShader}
+              fragmentShader={dnaHaloFragmentShader}
+              blending={AdditiveBlending}
+              depthWrite={false}
+              side={DoubleSide}
+              transparent
+            />
+          </mesh>
 
-        <mesh
-          geometry={geometries.ribbonGeometry}
-          frustumCulled={false}
-          renderOrder={1}
-        >
-          <shaderMaterial
-            ref={ribbonMaterialReference}
-            defines={{ LIGHT_SPOT_COUNT: lightSpots.positions.length }}
-            uniforms={ribbonUniforms}
-            vertexShader={dnaVertexShader}
-            fragmentShader={dnaFragmentShader}
-            blending={AdditiveBlending}
-            depthWrite={false}
-            side={DoubleSide}
-            transparent
-          />
-        </mesh>
+          <mesh
+            geometry={geometries.ribbonGeometry}
+            frustumCulled={false}
+            renderOrder={1}
+          >
+            <shaderMaterial
+              ref={ribbonMaterialReference}
+              defines={{ LIGHT_SPOT_COUNT: lightSpots.positions.length }}
+              uniforms={ribbonUniforms}
+              vertexShader={dnaVertexShader}
+              fragmentShader={dnaFragmentShader}
+              blending={AdditiveBlending}
+              depthWrite={false}
+              side={DoubleSide}
+              transparent
+            />
+          </mesh>
 
-        <points
-          geometry={geometries.particleGeometry}
-          frustumCulled={false}
-          renderOrder={2}
-        >
-          <shaderMaterial
-            ref={particleMaterialReference}
-            uniforms={particleUniforms}
-            vertexShader={dnaParticleVertexShader}
-            fragmentShader={dnaParticleFragmentShader}
-            blending={AdditiveBlending}
-            depthWrite={false}
-            transparent
-          />
-        </points>
+          <points
+            geometry={geometries.particleGeometry}
+            frustumCulled={false}
+            renderOrder={2}
+          >
+            <shaderMaterial
+              ref={particleMaterialReference}
+              uniforms={particleUniforms}
+              vertexShader={dnaParticleVertexShader}
+              fragmentShader={dnaParticleFragmentShader}
+              blending={AdditiveBlending}
+              depthWrite={false}
+              transparent
+            />
+          </points>
+        </group>
       </group>
     </>
   )

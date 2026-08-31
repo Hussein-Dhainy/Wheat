@@ -4,7 +4,9 @@ export function PortalScene({
   camera,
   entry,
   entered,
+  geneticsDetailOpen,
   onSelectGeneticsSeed,
+  onSceneWarmupComplete,
   pointerRef,
   predictionTestsOpen,
   reducedMotion,
@@ -22,7 +24,9 @@ export function PortalScene({
     <SceneComponent
       {...entry.sceneProps}
       entered={entered}
+      geneticsDetailOpen={geneticsDetailOpen}
       onSelectGeneticsSeed={onSelectGeneticsSeed}
+      onSceneWarmupComplete={onSceneWarmupComplete}
       pointerRef={pointerRef}
       predictionTestsOpen={predictionTestsOpen}
       quality="high"

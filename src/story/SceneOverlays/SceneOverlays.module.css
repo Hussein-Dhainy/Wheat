@@ -1394,6 +1394,841 @@
   pointer-events: none !important;
 }
 
+.geneticsExperience {
+  position: absolute;
+  inset: 0;
+  opacity: clamp(
+    0,
+    calc((0.4 - var(--scene-progress, 0)) * 10),
+    var(--scene-visibility, 1)
+  );
+  pointer-events: none;
+  transition: opacity 120ms linear;
+  will-change: opacity;
+}
+
+.geneticsIntro,
+.geneticsDetail {
+  position: absolute;
+  inset: 0;
+}
+
+.geneticsIntro {
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    opacity 360ms ease,
+    transform 780ms cubic-bezier(0.2, 0.72, 0.2, 1),
+    visibility 0s linear 0s;
+  visibility: visible;
+}
+
+.geneticsExperience[data-detail-open='true'] .geneticsIntro {
+  opacity: 0;
+  transform: scale(1.035);
+  transition:
+    opacity 360ms ease,
+    transform 780ms cubic-bezier(0.2, 0.72, 0.2, 1),
+    visibility 0s linear 520ms;
+  visibility: hidden;
+}
+
+.geneticsDetail {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 520ms ease 0s,
+    visibility 0s linear 520ms;
+}
+
+.geneticsExperience[data-detail-open='true'] .geneticsDetail {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 620ms ease 560ms,
+    visibility 0s linear 0s;
+}
+
+.geneticsIntroCopy {
+  position: absolute;
+  top: 50%;
+  left: clamp(1.75rem, 7.8vw, 9.5rem);
+  width: min(45rem, 46vw);
+  transform: translateY(-50%);
+}
+
+.geneticsEyebrow {
+  margin: 0 0 1rem;
+  color: var(--scene-accent);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.geneticsTitleLines {
+  display: block;
+  width: min(46rem, 47vw);
+  pointer-events: auto;
+}
+
+.geneticsIntroBody {
+  max-width: 38rem;
+  margin: clamp(1.3rem, 2.2vw, 2rem) 0 0;
+  color: rgb(255 255 255 / 76%);
+  font-size: clamp(1.04rem, 1.32vw, 1.22rem);
+  line-height: 1.65;
+}
+
+.geneticsEyebrow,
+.geneticsIntroBody span {
+  display: block;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.geneticsIntro[data-intro-state='waiting'] .geneticsEyebrow,
+.geneticsIntro[data-intro-state='waiting'] .geneticsIntroBody span {
+  clip-path: inset(0 100% 0 0);
+  opacity: 0;
+  transform: translateX(-0.75rem);
+}
+
+.geneticsIntro:not([data-intro-state='waiting']) .geneticsEyebrow {
+  animation: prediction-subtitle-reveal 700ms cubic-bezier(0.22, 0.72, 0.2, 1) 1350ms both;
+}
+
+.geneticsIntro:not([data-intro-state='waiting']) .geneticsIntroBody span {
+  animation: prediction-subtitle-reveal 800ms cubic-bezier(0.22, 0.72, 0.2, 1) 1450ms both;
+}
+
+.geneticsActionOrbit {
+  position: absolute;
+  top: 50%;
+  right: clamp(3rem, 10vw, 12rem);
+  display: grid;
+  width: clamp(8.5rem, 11vw, 11.5rem);
+  aspect-ratio: 1;
+  place-items: center;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: transform 260ms ease;
+}
+
+.layer[data-genetics-intro-active='true']
+  .geneticsIntro[data-controls-ready='true']
+  .geneticsActionOrbit {
+  pointer-events: auto;
+}
+
+.geneticsActionRings {
+  position: absolute;
+  inset: -1.45rem;
+  z-index: 2;
+  width: calc(100% + 2.9rem);
+  height: calc(100% + 2.9rem);
+  overflow: visible;
+  pointer-events: none;
+  transform: rotate(-90deg);
+}
+
+.geneticsActionInnerRing,
+.geneticsActionOuterRing,
+.geneticsActionHighlight {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.geneticsActionInnerRing {
+  stroke: rgb(255 255 255 / 82%);
+}
+
+.geneticsActionOuterRing {
+  stroke: rgb(255 255 255 / 36%);
+}
+
+.geneticsActionHighlight {
+  opacity: 0;
+  stroke: rgb(255 255 255 / 92%);
+  stroke-dasharray: 0.22 0.78;
+  stroke-linecap: round;
+}
+
+.geneticsIntro[data-intro-state='waiting'] .geneticsActionInnerRing,
+.geneticsIntro[data-intro-state='waiting'] .geneticsActionOuterRing {
+  stroke-dasharray: 0 1;
+}
+
+.geneticsIntro:not([data-intro-state='waiting']) .geneticsActionInnerRing {
+  animation: prediction-inner-ring-draw 700ms cubic-bezier(0.35, 0, 0.2, 1) 1800ms both;
+}
+
+.geneticsIntro:not([data-intro-state='waiting']) .geneticsActionOuterRing {
+  animation: prediction-outer-ring-draw 900ms cubic-bezier(0.35, 0, 0.2, 1) 1950ms both;
+}
+
+.geneticsIntro[data-controls-ready='true'] .geneticsActionInnerRing,
+.geneticsIntro[data-controls-ready='true'] .geneticsActionOuterRing {
+  animation: none;
+  stroke-dasharray: none;
+  stroke-dashoffset: 0;
+}
+
+.geneticsIntro[data-controls-ready='true'] .geneticsActionHighlight {
+  opacity: 1;
+  animation: prediction-svg-ring-orbit 4.6s linear infinite;
+}
+
+.geneticsActionOrbit:hover,
+.geneticsActionOrbit:focus-within {
+  transform: translateY(-50%) scale(1.065);
+}
+
+.geneticsAction {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 1.2rem;
+  color: #fff;
+  font: inherit;
+  font-size: clamp(0.62rem, 0.78vw, 0.78rem);
+  font-weight: 780;
+  letter-spacing: 0.09em;
+  line-height: 1.25;
+  text-align: center;
+  text-transform: uppercase;
+  background: rgb(255 255 255 / 5%);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  place-items: center;
+  pointer-events: none;
+  transition: background-color 220ms ease, opacity 400ms ease, transform 400ms ease;
+}
+
+.geneticsIntro[data-intro-state='waiting'] .geneticsAction {
+  opacity: 0;
+  transform: scale(0.88);
+}
+
+.geneticsIntro:not([data-intro-state='waiting']) .geneticsAction {
+  animation: prediction-test-action-reveal 400ms cubic-bezier(0.2, 0.72, 0.2, 1) 2350ms both;
+}
+
+.geneticsAction:disabled {
+  cursor: default;
+}
+
+.geneticsIntro[data-controls-ready='true'] .geneticsAction {
+  pointer-events: auto;
+}
+
+.geneticsAction:hover {
+  background: rgb(255 255 255 / 12%);
+}
+
+.geneticsAction span {
+  position: relative;
+  z-index: 4;
+  width: calc(100% - 1.25rem);
+  text-align: center;
+}
+
+.geneticsAction:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 0.45rem;
+}
+
+.fallback .geneticsExperience {
+  position: relative;
+  min-height: 70svh;
+  opacity: 1;
+}
+
+.fallback .geneticsIntro {
+  position: relative;
+}
+
+.fallback .geneticsActionOrbit {
+  display: none;
+}
+
+.geneticsBridge {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 420ms ease,
+    visibility 0s linear 420ms;
+  visibility: hidden;
+}
+
+.layer[data-genetics-bridge-active='true'] .geneticsBridge,
+.fallback .geneticsBridge {
+  opacity: 1;
+  transition:
+    opacity 420ms ease,
+    visibility 0s linear 0s;
+  visibility: visible;
+}
+
+.geneticsBridgeCopy {
+  position: absolute;
+  top: 50%;
+  left: clamp(1.75rem, 7.8vw, 9.5rem);
+  width: min(50rem, 52vw);
+  transform: translateY(-50%);
+}
+
+.geneticsBridgeTitle {
+  display: block;
+  width: min(50rem, 52vw);
+  pointer-events: auto;
+}
+
+.geneticsBridgeBody {
+  max-width: 39rem;
+  margin: clamp(1.25rem, 2vw, 1.8rem) 0 0;
+  color: rgb(255 255 255 / 76%);
+  font-size: clamp(1.02rem, 1.28vw, 1.18rem);
+  line-height: 1.65;
+}
+
+.geneticsBridgeBody span {
+  display: block;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.geneticsBridge[data-intro-state='waiting'] .geneticsBridgeBody span {
+  clip-path: inset(0 100% 0 0);
+  opacity: 0;
+  transform: translateX(-0.75rem);
+}
+
+.geneticsBridge:not([data-intro-state='waiting']) .geneticsBridgeBody span {
+  animation: prediction-subtitle-reveal 800ms cubic-bezier(0.22, 0.72, 0.2, 1) 1450ms both;
+}
+
+.fallback .geneticsBridge {
+  position: relative;
+  min-height: 70svh;
+}
+
+.geneticsDetailRings {
+  position: absolute;
+  top: 50%;
+  left: 27.5%;
+  width: clamp(11.5rem, 15vw, 15.5rem);
+  aspect-ratio: 1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.72);
+  transition:
+    opacity 620ms ease,
+    transform 1100ms cubic-bezier(0.16, 0.78, 0.18, 1);
+}
+
+.geneticsExperience[data-detail-open='true'] .geneticsDetailRings {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  transition-delay: 520ms;
+}
+
+.geneticsDetailCoreRing,
+.geneticsDetailPulseRing {
+  position: absolute;
+  inset: 0;
+}
+
+.geneticsDetailCoreRing {
+  z-index: 2;
+  border: 1px solid rgb(83 220 166 / 92%);
+  border-radius: 50%;
+  box-shadow:
+    0 0 1.2rem rgb(51 206 151 / 11%),
+    inset 0 0 1.1rem rgb(51 206 151 / 5%);
+}
+
+.geneticsDetailCoreRing::after {
+  position: absolute;
+  inset: -0.22rem;
+  content: '';
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 68%,
+    rgb(83 220 166 / 18%) 78%,
+    rgb(190 255 224 / 98%) 91%,
+    transparent 100%
+  );
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 0.24rem),
+    #000 calc(100% - 0.13rem)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 0.24rem),
+    #000 calc(100% - 0.13rem)
+  );
+}
+
+.geneticsExperience[data-detail-open='true'] .geneticsDetailCoreRing {
+  animation: genetics-detail-core-response
+    var(--genetics-core-signal-interval, 5.333s)
+    ease-out
+    var(--genetics-core-signal-delay, 3.307s)
+    infinite;
+}
+
+.geneticsExperience[data-detail-open='true'] .geneticsDetailCoreRing::after {
+  animation: genetics-detail-core-sweep
+    var(--genetics-core-signal-interval, 5.333s)
+    linear
+    var(--genetics-core-signal-delay, 3.307s)
+    infinite;
+}
+
+.geneticsDetailConnectionAnchor,
+.geneticsDetailConnectionOrbit {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.geneticsDetailConnectionAnchor {
+  z-index: 1;
+  transform: rotate(var(--genetics-signal-node-angle, 0deg));
+}
+
+.geneticsDetailConnectionOrbit {
+  transform-box: border-box;
+  transform-origin: 50% 50%;
+}
+
+.geneticsExperience[data-detail-open='true'] .geneticsDetailConnectionOrbit {
+  animation: genetics-detail-orbit var(--genetics-orbit-spin, 30s) linear infinite;
+  animation-delay: var(--genetics-orbit-delay, 0s);
+  animation-direction: var(--genetics-orbit-direction, normal);
+}
+
+.geneticsDetailConnectionLine {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  display: block;
+  width: 0;
+  height: 1px;
+  overflow: hidden;
+  background: rgb(83 220 166 / 32%);
+  box-shadow: 0 0 0.35rem rgb(83 220 166 / 18%);
+  opacity: 0;
+  transform: translateY(-50%);
+  transform-origin: left center;
+}
+
+.geneticsDetailConnectionLine::after {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 35%;
+  content: '';
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(190 255 224 / 100%) 58%,
+    #53dca6
+  );
+  box-shadow: 0 0 0.55rem rgb(83 220 166 / 72%);
+  opacity: 0;
+}
+
+.geneticsExperience[data-detail-open='true'] .geneticsDetailConnectionLine {
+  animation: genetics-detail-connection-span
+    var(--genetics-pulse-duration, 16s)
+    linear
+    var(--genetics-pulse-delay, 0s)
+    infinite;
+}
+
+.geneticsExperience[data-detail-open='true'] .geneticsDetailConnectionLine::after {
+  animation: genetics-detail-connection-light
+    var(--genetics-pulse-duration, 16s)
+    linear
+    var(--genetics-pulse-delay, 0s)
+    infinite;
+}
+
+.geneticsDetailPulseRing {
+  opacity: 0;
+  transform: scale(1);
+}
+
+/* Three rings evenly staggered across the 16-second pulse cycle. */
+.geneticsExperience[data-detail-open='true'] .geneticsDetailPulseRing {
+  animation: genetics-detail-pulse
+    var(--genetics-pulse-duration, 16s)
+    linear
+    var(--genetics-pulse-delay, 0s)
+    infinite;
+}
+
+/* The pulse ring's own stroke and its three node rings live together in one
+   rotating SVG, nested inside the scaling ring. A second animation on the
+   ring element itself would overwrite the pulse's transform, whereas a
+   child's rotation composes with the parent's scale — so the nodes inherit
+   the expansion and fade, and add their own turn on top.
+   overflow stays visible because the node rings straddle the arc. */
+.geneticsDetailPulseOrbit {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  /* Stated rather than left to the default, which differs between SVG and
+     ordinary boxes — the rotation has to pivot on the ring's centre. */
+  transform-box: border-box;
+  transform-origin: 50% 50%;
+}
+
+/* Starting angle, direction, and speed are assigned per ring in
+   GeneticsIntro.jsx. These must stay after the shorthand, which would
+   otherwise reset them. */
+.geneticsExperience[data-detail-open='true'] .geneticsDetailPulseOrbit {
+  animation: genetics-detail-orbit var(--genetics-orbit-spin, 30s) linear infinite;
+  animation-delay: var(--genetics-orbit-delay, 0s);
+  animation-direction: var(--genetics-orbit-direction, normal);
+}
+
+.geneticsDetailPulseArc,
+.geneticsDetailPulseNode {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+/* The arc is cut into three drawn segments in GeneticsIntro.jsx, leaving a
+   gap at each node ring — see the note there for why this is path geometry
+   rather than a dash pattern. */
+.geneticsDetailPulseArc {
+  stroke: rgb(255 255 255 / 54%);
+}
+
+.geneticsDetailPulseNode {
+  stroke: rgb(255 255 255 / 96%);
+  stroke-width: 0.6;
+}
+
+.geneticsDetailPulseNodeAccent {
+  stroke: #53dca6;
+}
+
+/* The bond narrows by scaling about the helix's own axis — hence fill-box,
+   since the SVG default resolves against the whole viewBox and would swing the
+   rung around the ring's centre instead. The points deliberately do NOT ride
+   inside that scale: a scaled circle flattens into an ellipse. They translate
+   the same distance instead, so they stay round. Both animations are linear
+   off one shared phase, which is what keeps a point on its bond's end.
+   Stroke stays finer than the rings so the stack reads as separate lines. */
+.geneticsDetailHelixBond {
+  transform-box: fill-box;
+  transform-origin: center;
+  stroke: rgb(255 255 255 / 74%);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+
+.geneticsDetailHelixPoint {
+  fill: #fff;
+}
+
+.geneticsExperience[data-detail-open='true'] .geneticsDetailHelixBond {
+  animation: genetics-helix-spin var(--genetics-helix-spin, 16s) linear infinite;
+  animation-delay: var(--genetics-helix-delay, 0s);
+}
+
+.geneticsExperience[data-detail-open='true'] .geneticsDetailHelixPoint {
+  animation: genetics-helix-point var(--genetics-helix-spin, 16s) linear infinite;
+  animation-delay: var(--genetics-helix-delay, 0s);
+}
+
+/* The far strand: same swing, opposite end. */
+.geneticsExperience[data-detail-open='true'] .geneticsDetailHelixPointBack {
+  animation-name: genetics-helix-point-back;
+}
+
+.geneticsDetailCopy {
+  position: absolute;
+  top: 50%;
+  left: 55%;
+  width: min(43rem, 40vw);
+  transform: translateY(-50%);
+}
+
+.geneticsDetailEyebrow {
+  margin: 0 0 1rem;
+  color: #53dca6;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.geneticsDetailTitle {
+  display: block;
+  width: min(43rem, 40vw);
+  pointer-events: auto;
+}
+
+.geneticsDetailBody {
+  max-width: 38rem;
+  margin: clamp(1.3rem, 2.2vw, 2rem) 0 0;
+  color: rgb(255 255 255 / 76%);
+  font-size: clamp(1rem, 1.24vw, 1.16rem);
+  line-height: 1.65;
+}
+
+.geneticsDetailEyebrow,
+.geneticsDetailBody span {
+  display: block;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.geneticsDetail[data-intro-state='waiting'] .geneticsDetailEyebrow,
+.geneticsDetail[data-intro-state='waiting'] .geneticsDetailBody span {
+  clip-path: inset(0 100% 0 0);
+  opacity: 0;
+  transform: translateX(-0.75rem);
+}
+
+.geneticsDetail:not([data-intro-state='waiting']) .geneticsDetailEyebrow {
+  animation: result-supporting-copy-reveal 700ms cubic-bezier(0.22, 0.72, 0.2, 1) 1250ms both;
+}
+
+.geneticsDetail:not([data-intro-state='waiting']) .geneticsDetailBody span {
+  animation: result-supporting-copy-reveal 800ms cubic-bezier(0.22, 0.72, 0.2, 1) 1380ms both;
+}
+
+.geneticsDetailClose {
+  position: absolute;
+  top: clamp(1.5rem, 4vw, 3.75rem);
+  right: clamp(1.5rem, 4vw, 3.75rem);
+  z-index: 8;
+  width: clamp(3.75rem, 5vw, 5.25rem);
+  aspect-ratio: 1;
+  padding: 0;
+  color: #fff;
+  background: rgb(0 30 24 / 34%);
+  border: 1px solid rgb(255 255 255 / 72%);
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: auto;
+  transform: rotate(90deg) scale(0.72);
+  transition:
+    background-color 200ms ease,
+    opacity 420ms ease,
+    transform 620ms cubic-bezier(0.2, 0.72, 0.2, 1);
+}
+
+.geneticsExperience[data-detail-open='true'] .geneticsDetailClose {
+  opacity: 1;
+  transform: rotate(0) scale(1);
+  transition-delay: 720ms;
+}
+
+.geneticsDetailClose span {
+  display: block;
+  font-size: clamp(1.7rem, 2.2vw, 2.2rem);
+  font-weight: 200;
+  line-height: 1;
+  transform: translateY(-0.06em);
+}
+
+.geneticsDetailClose:hover,
+.geneticsDetailClose:focus-visible {
+  background: rgb(255 255 255 / 12%);
+  transform: rotate(0) scale(1.06);
+}
+
+.geneticsDetailClose:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 0.3rem;
+}
+
+@keyframes genetics-detail-core-response {
+  0%,
+  10% {
+    border-color: rgb(190 255 224 / 100%);
+    box-shadow:
+      0 0 1.9rem rgb(83 220 166 / 44%),
+      0 0 0.65rem rgb(190 255 224 / 34%),
+      inset 0 0 1.5rem rgb(83 220 166 / 20%);
+  }
+
+  42%,
+  100% {
+    border-color: rgb(83 220 166 / 92%);
+    box-shadow:
+      0 0 1.2rem rgb(51 206 151 / 11%),
+      inset 0 0 1.1rem rgb(51 206 151 / 5%);
+  }
+}
+
+@keyframes genetics-detail-core-sweep {
+  0% {
+    opacity: 0;
+    transform: rotate(0deg) scale(0.98);
+  }
+
+  5% {
+    opacity: 1;
+  }
+
+  34% {
+    opacity: 0.9;
+    transform: rotate(330deg) scale(1.045);
+  }
+
+  48%,
+  100% {
+    opacity: 0;
+    transform: rotate(430deg) scale(1.06);
+  }
+}
+
+@keyframes genetics-detail-connection-span {
+  0% {
+    width: 0;
+    opacity: 0;
+  }
+
+  4% {
+    width: 0;
+  }
+
+  38% {
+    width: 63.3%;
+    opacity: 0;
+  }
+
+  40% {
+    opacity: 1;
+  }
+
+  56% {
+    width: 96.7%;
+    opacity: 1;
+  }
+
+  60% {
+    width: 104.1%;
+    opacity: 0;
+  }
+
+  100% {
+    width: 178.4%;
+    opacity: 0;
+  }
+}
+
+@keyframes genetics-detail-connection-light {
+  0%,
+  43% {
+    opacity: 0;
+    transform: translateX(300%);
+  }
+
+  44% {
+    opacity: 1;
+  }
+
+  54% {
+    opacity: 1;
+    transform: translateX(-100%);
+  }
+
+  57%,
+  100% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes genetics-detail-pulse {
+  0% {
+    opacity: 0.62;
+    transform: scale(1);
+  }
+
+  60% {
+    opacity: 0.62;
+  }
+
+  82% {
+    opacity: 0.34;
+  }
+
+  96% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(5.35);
+  }
+}
+
+@keyframes genetics-detail-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* One full turn of the helix: front face, edge-on, back face, edge-on.
+   Paired with linear timing on purpose. True rotation is cosine, which crawls
+   near the extremes and leaves a run of neighbouring rungs all at full width —
+   the rounded, bulging silhouette. Sweeping the width evenly instead makes the
+   strand edges read as straight diagonals meeting at sharp crossings. */
+@keyframes genetics-helix-spin {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+
+  50% {
+    transform: scaleX(-1);
+  }
+}
+
+/* The point equivalents of the scaleX above: the same edge position reached by
+   moving rather than stretching. Reach is the bond's half-length. */
+@keyframes genetics-helix-point {
+  0%,
+  100% {
+    transform: translateX(var(--genetics-helix-reach, 1.47px));
+  }
+
+  50% {
+    transform: translateX(calc(var(--genetics-helix-reach, 1.47px) * -1));
+  }
+}
+
+@keyframes genetics-helix-point-back {
+  0%,
+  100% {
+    transform: translateX(calc(var(--genetics-helix-reach, 1.47px) * -1));
+  }
+
+  50% {
+    transform: translateX(var(--genetics-helix-reach, 1.47px));
+  }
+}
+
 .seedSelector {
   position: relative;
   display: grid;
@@ -1424,7 +2259,7 @@
   margin-bottom: 0.8rem;
 }
 
-.seedCopy h2 {
+.seedCopy h3 {
   max-width: 9ch;
   margin: 0;
   font-size: clamp(2.7rem, 5vw, 5.5rem);
@@ -1648,6 +2483,81 @@
     justify-self: start;
   }
 
+  .geneticsIntroCopy {
+    top: 18vh;
+    left: 1.5rem;
+    width: min(31rem, calc(100vw - 3rem));
+    transform: none;
+  }
+
+  .geneticsTitleLines {
+    width: min(34rem, calc(100vw - 3rem));
+  }
+
+  .geneticsBridgeCopy {
+    top: 50%;
+    left: 1.5rem;
+    width: min(34rem, calc(100vw - 3rem));
+  }
+
+  .geneticsBridgeTitle {
+    width: min(34rem, calc(100vw - 3rem));
+  }
+
+  .geneticsBridgeBody {
+    max-width: 25rem;
+    margin-top: 1rem;
+    font-size: 0.98rem;
+  }
+
+  .geneticsIntroBody {
+    max-width: 25rem;
+    margin-top: 1rem;
+    font-size: 0.98rem;
+  }
+
+  .geneticsDetailCopy {
+    top: 15vh;
+    left: 1.5rem;
+    width: min(31rem, calc(100vw - 3rem));
+    transform: none;
+  }
+
+  .geneticsDetailTitle {
+    width: min(34rem, calc(100vw - 3rem));
+  }
+
+  .geneticsDetailBody {
+    max-width: 25rem;
+    margin-top: 0.9rem;
+    font-size: 0.88rem;
+  }
+
+  .geneticsDetailRings {
+    top: 66%;
+    left: 50%;
+    width: 8.8rem;
+  }
+
+  .geneticsDetailClose {
+    top: 1.25rem;
+    right: 1.25rem;
+    width: 3.75rem;
+  }
+
+  .geneticsActionOrbit {
+    top: auto;
+    right: 2.25rem;
+    bottom: max(2.25rem, env(safe-area-inset-bottom));
+    width: 7.6rem;
+    transform: none;
+  }
+
+  .geneticsActionOrbit:hover,
+  .geneticsActionOrbit:focus-within {
+    transform: scale(1.065);
+  }
+
   .seedSelector {
     align-self: end;
     justify-self: stretch;
@@ -1656,7 +2566,7 @@
     gap: 1.15rem;
   }
 
-  .seedCopy h2 {
+  .seedCopy h3 {
     font-size: clamp(2.5rem, 12vw, 4rem);
   }
 
@@ -1754,6 +2664,11 @@
   }
 
   .predictionSubtitle span,
+  .geneticsEyebrow,
+  .geneticsIntroBody span,
+  .geneticsBridgeBody span,
+  .geneticsDetailEyebrow,
+  .geneticsDetailBody span,
   .conditionBody span,
   .fieldSubtitle span,
   .resultIntroEyebrow span,
@@ -1761,6 +2676,11 @@
   .testActionInnerRing,
   .testActionOuterRing,
   .testActionOrbitHighlight,
+  .geneticsActionInnerRing,
+  .geneticsActionOuterRing,
+  .geneticsActionHighlight,
+  .geneticsAction,
+  .geneticsDetailPulseRing,
   .testAction {
     animation: none !important;
     clip-path: none !important;
@@ -1771,6 +2691,40 @@
 
   .testActionOrbitHighlight {
     opacity: 0 !important;
+  }
+
+  .geneticsActionHighlight {
+    opacity: 0 !important;
+  }
+
+  .geneticsDetailPulseRing {
+    opacity: 0.18 !important;
+  }
+
+  .geneticsDetailCoreRing,
+  .geneticsDetailConnectionOrbit,
+  .geneticsDetailConnectionLine,
+  .geneticsDetailConnectionLine::after,
+  .geneticsDetailCoreRing::after {
+    animation: none !important;
+  }
+
+  .geneticsDetailConnectionLine,
+  .geneticsDetailConnectionLine::after,
+  .geneticsDetailCoreRing::after {
+    opacity: 0 !important;
+  }
+
+  .geneticsDetailPulseRing:nth-of-type(2) {
+    transform: scale(2) !important;
+  }
+
+  .geneticsDetailPulseRing:nth-of-type(3) {
+    transform: scale(3.7) !important;
+  }
+
+  .geneticsDetailPulseRing:nth-of-type(4) {
+    transform: scale(5.35) !important;
   }
 
   .predictionIntro,
@@ -1809,6 +2763,16 @@
   }
 
   .seedSelector,
+  .geneticsExperience,
+  .geneticsIntro,
+  .geneticsBridge,
+  .geneticsDetail,
+  .geneticsDetailRings,
+  .geneticsDetailPulseOrbit,
+  .geneticsDetailHelixBond,
+  .geneticsDetailHelixPoint,
+  .geneticsDetailClose,
+  .geneticsActionOrbit,
   .seedOptions button,
   .resultDetail,
   .resultOptions button {

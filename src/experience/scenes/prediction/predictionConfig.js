@@ -124,7 +124,7 @@ export const PREDICTION_RENDER_CONFIG = {
       {
         id: 'far',
         assetId: 'far',
-        count: 220,
+        count: 110,
         depthRange: [4, 86],
         heroClearingRadius: 0,
         horizontalRange: [9, 58],
@@ -133,7 +133,7 @@ export const PREDICTION_RENDER_CONFIG = {
       {
         id: 'mid',
         assetId: 'far',
-        count: 96,
+        count: 48,
         depthRange: [1.25, 13],
         heroClearingRadius: 0,
         horizontalRange: [4.5, 14],

@@ -11,6 +11,7 @@ import { SCENE_TIMELINE } from '../config/sceneTimeline.js'
 import { PortalScene } from './PortalScene.jsx'
 import {
   createOverlayUpdateSignature,
+  createWarmupTracker,
   getCompositorRenderTargetSize,
 } from './sceneManagerPerformance.js'
 import {
@@ -43,6 +44,7 @@ if (
 
 export function SceneManager({
   entered,
+  geneticsDetailOpen,
   onSelectGeneticsSeed,
   onWarmupComplete,
   overlayRootRef,
@@ -106,6 +108,13 @@ export function SceneManager({
   const [sceneStateRefs] = useState(
     () => SCENE_REGISTRY.map((_, index) => createSceneState(index)),
   )
+  const warmupTracker = useMemo(
+    () => createWarmupTracker(
+      ['main-scenes', 'prediction-backdrop'],
+      onWarmupComplete,
+    ),
+    [onWarmupComplete],
+  )
 
   useEffect(() => {
     gl.getDrawingBufferSize(drawingBufferSize)
@@ -163,9 +172,8 @@ export function SceneManager({
     gl.autoClear = previousAutoClear
     warmupTarget.dispose()
 
-    onWarmupComplete?.()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    warmupTracker.markComplete('main-scenes')
+  }, [gl, portalCameras, portalScenes, warmupTracker])
 
   useEffect(() => {
     const generation = renderTargetLifecycle.current.generation + 1
@@ -299,7 +307,9 @@ export function SceneManager({
           camera={portalCameras[index]}
           entered={entered}
           entry={entry}
+          geneticsDetailOpen={geneticsDetailOpen}
           onSelectGeneticsSeed={onSelectGeneticsSeed}
+          onSceneWarmupComplete={warmupTracker.markComplete}
           pointerRef={pointerRef}
           predictionTestsOpen={predictionTestsOpen}
           reducedMotion={reducedMotion}

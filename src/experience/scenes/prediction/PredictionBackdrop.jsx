@@ -1,13 +1,17 @@
 import { createPortal, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Color, MathUtils, Scene } from 'three'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Color, MathUtils, Scene, Vector4 } from 'three'
 import { createBlurPass, createRenderTarget } from './fieldGeometry.js'
 import { PREDICTION_RENDER_CONFIG as CONFIG } from './predictionConfig.js'
 
 const BACKDROP = CONFIG.backdrop
 
-export function PredictionBackdrop({ children, sceneStateRef }) {
-  const { gl, size, viewport } = useThree()
+export function PredictionBackdrop({
+  children,
+  onWarmupComplete,
+  sceneStateRef,
+}) {
+  const { camera, gl, size, viewport } = useThree()
   const [backdropScene] = useState(() => new Scene())
   const [sourceRenderTarget] = useState(() => createRenderTarget(true))
   const [horizontalBlurTarget] = useState(() => createRenderTarget(false))
@@ -17,7 +21,17 @@ export function PredictionBackdrop({ children, sceneStateRef }) {
     [sourceRenderTarget],
   )
   const planeRef = useRef()
+  const resourceLifecycle = useRef({
+    generation: 0,
+    blurPass: null,
+    horizontalBlurTarget: null,
+    sourceRenderTarget: null,
+    verticalBlurTarget: null,
+  })
+  const warmupCompleteRef = useRef(false)
   const savedClearColor = useMemo(() => new Color(), [])
+  const savedScissor = useMemo(() => new Vector4(), [])
+  const savedViewport = useMemo(() => new Vector4(), [])
 
   useEffect(() => {
     const width = Math.max(
@@ -42,26 +56,53 @@ export function PredictionBackdrop({ children, sceneStateRef }) {
     viewport.dpr,
   ])
 
-  useEffect(() => () => {
-    sourceRenderTarget.dispose()
-    horizontalBlurTarget.dispose()
-    verticalBlurTarget.dispose()
-    blurPass.geometry.dispose()
-    blurPass.material.dispose()
+  useEffect(() => {
+    const generation = resourceLifecycle.current.generation + 1
+    resourceLifecycle.current = {
+      generation,
+      blurPass,
+      horizontalBlurTarget,
+      sourceRenderTarget,
+      verticalBlurTarget,
+    }
+
+    return () => {
+      // Strict Mode immediately replays this effect with the same resources.
+      // Delay disposal so that replay retains the private pipeline warmed
+      // behind the preloader, while a real unmount still releases everything.
+      queueMicrotask(() => {
+        const current = resourceLifecycle.current
+        const componentStayedUnmounted = current.generation === generation
+        const resourcesWereReplaced = current.blurPass !== blurPass
+          || current.horizontalBlurTarget !== horizontalBlurTarget
+          || current.sourceRenderTarget !== sourceRenderTarget
+          || current.verticalBlurTarget !== verticalBlurTarget
+
+        if (componentStayedUnmounted || resourcesWereReplaced) {
+          sourceRenderTarget.dispose()
+          horizontalBlurTarget.dispose()
+          verticalBlurTarget.dispose()
+          blurPass.geometry.dispose()
+          blurPass.material.dispose()
+        }
+      })
+    }
   }, [blurPass, horizontalBlurTarget, sourceRenderTarget, verticalBlurTarget])
 
-  useFrame(({ camera }) => {
-    if (!planeRef.current || !sceneStateRef?.current?.isActive) return
-
+  const renderBackdropPipeline = useCallback((activeCamera) => {
     const previousRenderTarget = gl.getRenderTarget()
     const previousAutoClear = gl.autoClear
     const previousClearAlpha = gl.getClearAlpha()
+    const previousScissorTest = gl.getScissorTest()
     gl.getClearColor(savedClearColor)
+    gl.getScissor(savedScissor)
+    gl.getViewport(savedViewport)
 
     gl.autoClear = true
+    gl.setScissorTest(false)
     gl.setClearColor(0x000000, 0)
     gl.setRenderTarget(sourceRenderTarget)
-    gl.render(backdropScene, camera)
+    gl.render(backdropScene, activeCamera)
 
     let blurInput = sourceRenderTarget.texture
     for (let iteration = 0; iteration < BACKDROP.blurIterations; iteration += 1) {
@@ -78,17 +119,46 @@ export function PredictionBackdrop({ children, sceneStateRef }) {
     }
 
     gl.setRenderTarget(previousRenderTarget)
+    gl.setViewport(savedViewport)
+    gl.setScissor(savedScissor)
+    gl.setScissorTest(previousScissorTest)
     gl.setClearColor(savedClearColor, previousClearAlpha)
     gl.autoClear = previousAutoClear
+  }, [
+    backdropScene,
+    blurPass,
+    gl,
+    horizontalBlurTarget,
+    savedClearColor,
+    savedScissor,
+    savedViewport,
+    sourceRenderTarget,
+    verticalBlurTarget,
+  ])
 
-    const distance = camera.position.z - BACKDROP.planeZ
+  useEffect(() => {
+    if (warmupCompleteRef.current) return
+
+    // Warm the private field scene, blur shaders, textures, geometry, and
+    // actual-size render targets before the preloader uncovers the canvas.
+    renderBackdropPipeline(camera)
+    warmupCompleteRef.current = true
+    onWarmupComplete?.('prediction-backdrop')
+  }, [camera, onWarmupComplete, renderBackdropPipeline])
+
+  useFrame(({ camera: activeCamera }) => {
+    if (!planeRef.current || !sceneStateRef?.current?.isActive) return
+
+    renderBackdropPipeline(activeCamera)
+
+    const distance = activeCamera.position.z - BACKDROP.planeZ
     const height = 2
-      * Math.tan(MathUtils.degToRad(camera.fov) / 2)
+      * Math.tan(MathUtils.degToRad(activeCamera.fov) / 2)
       * distance
-    const width = height * camera.aspect
+    const width = height * activeCamera.aspect
     planeRef.current.position.set(
-      camera.position.x,
-      camera.position.y,
+      activeCamera.position.x,
+      activeCamera.position.y,
       BACKDROP.planeZ,
     )
     planeRef.current.scale.set(width / 2, height / 2, 1)

@@ -1,8 +1,11 @@
-import { useFrame, useLoader, useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import { AdditiveBlending, MathUtils } from 'three'
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { advanceActiveSceneTime } from '../../activeSceneTime.js'
+import {
+  preloadWheatGrain,
+  useWheatGrainAssets,
+} from '../../systems/useWheatGrainAssets.js'
 import resultBackdropFragmentShader from './resultBackdropFragment.glsl?raw'
 import resultBackdropVertexShader from './resultBackdropVertex.glsl?raw'
 import ResultBackgroundParticles from './ResultBackgroundParticles.jsx'
@@ -14,8 +17,6 @@ import {
   createInspectionOrbitData,
   createNetworkData,
   createNetworkUniforms,
-  prepareGeometry,
-  prepareMaterial,
   smootherRange,
 } from './resultGeometry.js'
 import { getNearestRestRotation } from './resultInspection.js'
@@ -31,7 +32,7 @@ export function ResultScene({
   sceneStateRef,
 }) {
   const { camera, size, viewport } = useThree()
-  const { scene } = useLoader(GLTFLoader, CONFIG.modelUrl)
+  const assets = useWheatGrainAssets()
   const activeTime = useRef(0)
   const backdropMaterialRef = useRef()
   const cameraOffset = useRef({ x: 0, y: 0 })
@@ -114,18 +115,6 @@ export function ResultScene({
     uTime: { value: 0 },
     uVignetteStrength: { value: 1 },
   }), [])
-  const assets = useMemo(() => {
-    const geometry = prepareGeometry(
-      scene.getObjectByName(CONFIG.meshName),
-      CONFIG.meshName,
-    )
-    const materialNode = scene.getObjectByName(CONFIG.materialSourceMeshName)
-      ?? scene.getObjectByName(CONFIG.meshName)
-    return {
-      geometry,
-      material: prepareMaterial(materialNode),
-    }
-  }, [scene])
 
   useEffect(() => {
     camera.fov = CONFIG.camera.fov
@@ -133,11 +122,6 @@ export function ResultScene({
     camera.lookAt(...CONFIG.camera.lookAt)
     camera.updateProjectionMatrix()
   }, [camera])
-
-  useEffect(() => () => {
-    assets.geometry.dispose()
-    assets.material.dispose()
-  }, [assets])
 
   useFrame((_, delta) => {
     if (!sceneStateRef?.current?.isActive) return
@@ -216,7 +200,9 @@ export function ResultScene({
       position[1] + travelOffset,
       position[2],
     )
-    grainGroupRef.current.scale.setScalar(scale)
+    grainGroupRef.current.scale.setScalar(
+      scale * MathUtils.lerp(1, CONFIG.inspection.grainZoom, inspectionMix),
+    )
     const interaction = resultInteractionRef?.current
     const targetInspectionRotation = resultInspectionOpen
       ? interaction?.rotationTarget ?? 0
@@ -691,4 +677,4 @@ export function ResultScene({
   )
 }
 
-useLoader.preload(GLTFLoader, CONFIG.modelUrl)
+preloadWheatGrain()

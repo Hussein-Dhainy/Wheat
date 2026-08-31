@@ -1,4 +1,4 @@
-import { Color, DoubleSide, MathUtils, Vector2, Vector3 } from 'three'
+import { Color, MathUtils } from 'three'
 import { RESULT_SCENE_CONFIG as CONFIG } from './resultConfig.js'
 import { getResultOrbitMarkerAngle } from './resultInspection.js'
 
@@ -16,51 +16,6 @@ function seededRandom(seed) {
 export function smootherRange(value, range) {
   const progress = MathUtils.smoothstep(value, range[0], range[1])
   return progress * progress * (3 - 2 * progress)
-}
-
-export function prepareGeometry(node, name) {
-  if (!node?.isMesh || !node.geometry) {
-    throw new Error(`Result scene is missing required mesh: ${name}`)
-  }
-
-  const geometry = node.geometry.clone()
-  geometry.computeBoundingBox()
-  const size = new Vector3()
-  geometry.boundingBox.getSize(size)
-  geometry.center()
-  const normalization = 1 / Math.max(size.x, size.y, size.z, 0.0001)
-  geometry.scale(normalization, normalization, normalization)
-  geometry.computeBoundingSphere()
-  return geometry
-}
-
-export function prepareMaterial(node) {
-  const source = node?.material
-  if (!source?.isMeshStandardMaterial) {
-    throw new Error('Result grain requires a MeshStandardMaterial')
-  }
-
-  const material = source.clone()
-  material.color.multiply(new Color(CONFIG.material.colorTint))
-  material.emissive.set(CONFIG.material.emissive)
-  material.emissiveIntensity = CONFIG.material.emissiveIntensity
-  material.metalness = CONFIG.material.metalness
-  material.metalnessMap = null
-  material.roughness = CONFIG.material.roughness
-  material.roughnessMap = null
-  material.normalScale = new Vector2(
-    CONFIG.material.normalScale,
-    CONFIG.material.normalScale,
-  )
-  if ('specularIntensity' in material) {
-    material.specularIntensity = CONFIG.material.specularIntensity
-  }
-  if ('clearcoat' in material) material.clearcoat = CONFIG.material.clearcoat
-  if ('sheen' in material) material.sheen = CONFIG.material.sheen
-  material.side = DoubleSide
-  material.transparent = true
-  material.needsUpdate = true
-  return material
 }
 
 export function createDustPositions() {
