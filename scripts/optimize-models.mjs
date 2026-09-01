@@ -70,6 +70,14 @@ const MODELS = [
 // Ground048 below 1K, so the downscale happens here.
 const COLOUR = 'colour'
 const NORMAL = 'normal'
+// Re-encode at the source resolution instead of resizing. Unlike the ground,
+// the field texture is not oversized: Scene 4's camera flies 8-9 units above
+// a 64-unit plane the shader tiles 16x16, so one 4-unit tile fills roughly
+// 1150 device pixels at the capped 1.5 DPR. Its 1254px only just covers that
+// (1.09x); 1024 would fall to 0.89x and read soft. The waste here is the
+// format -- a lossless PNG holding dense, noisy crop photography -- not the
+// resolution.
+const PHOTO = 'photo'
 
 // Present in the source export but no longer requested by any code path, so
 // copying them into the shipped directory would be dead weight. They stay in
@@ -91,6 +99,18 @@ const TEXTURES = [
     note: 'ground normal',
     size: 256,
     treatment: NORMAL,
+  },
+  {
+    file: 'field/VariedWheatField.png',
+    note: 'field trials plot',
+    output: 'field/VariedWheatField.webp',
+    // PSNR against the source barely moves across the quality range -- 30.5dB
+    // at q78 up to only 32.6dB at q95 -- because the encoder is mostly
+    // spending bits on crop noise. 85 sits within 1dB of q95 for 70% of the
+    // bytes. Lossless WebP was measured at 2817KB, a mere 23% saving, so
+    // lossy is the only option worth taking here.
+    quality: 85,
+    treatment: PHOTO,
   },
 ]
 
@@ -201,13 +221,20 @@ async function resizeNormalTexture(source, destination, size) {
     .toFile(destination)
 }
 
+// Re-encodes a photographic texture to lossy WebP at its source resolution.
+async function reencodePhotoTexture(source, destination, quality) {
+  await sharp(source).webp({ quality }).toFile(destination)
+}
+
 async function resizeTexture(texture) {
   const source = join(SOURCE_DIR, texture.file)
-  const destination = join(OUTPUT_DIR, texture.file)
+  const destination = join(OUTPUT_DIR, texture.output ?? texture.file)
   mkdirSync(dirname(destination), { recursive: true })
 
   if (texture.treatment === NORMAL) {
     await resizeNormalTexture(source, destination, texture.size)
+  } else if (texture.treatment === PHOTO) {
+    await reencodePhotoTexture(source, destination, texture.quality)
   } else {
     await resizeColourTexture(source, destination, texture.size)
   }
@@ -280,7 +307,8 @@ async function main() {
   })
 
   for (const texture of TEXTURES) {
-    process.stdout.write(`${texture.file} (${texture.note}, ${texture.treatment} -> ${texture.size}px) ... `)
+    const detail = texture.size ? `-> ${texture.size}px` : `q${texture.quality} webp`
+    process.stdout.write(`${texture.file} (${texture.note}, ${texture.treatment} ${detail}) ... `)
     const { after, before } = await resizeTexture(texture)
     totalBefore += before
     totalAfter += after

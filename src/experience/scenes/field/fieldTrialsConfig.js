@@ -1,6 +1,6 @@
 import { assetUrl } from '../../../config/assetBase.js'
 export const FIELD_TRIALS_CONFIG = {
-  textureUrl: assetUrl('field/VariedWheatField.png'),
+  textureUrl: assetUrl('field/VariedWheatField.webp'),
   background: '#172315',
   planeSize: 64,
   gridSize: [16, 16],

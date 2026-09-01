@@ -37,7 +37,7 @@ test('field tint assignment is deterministic and individually overridable', () =
 test('the field uses enough geometry overscan to hide the plane boundary', () => {
   assert.equal(
     FIELD_TRIALS_CONFIG.textureUrl,
-    assetUrl('field/VariedWheatField.png'),
+    assetUrl('field/VariedWheatField.webp'),
   )
   assert.ok(FIELD_TRIALS_CONFIG.planeSize >= 40)
   assert.ok(FIELD_TRIALS_CONFIG.gridSize[0] >= 16)
