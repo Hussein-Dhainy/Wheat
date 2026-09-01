@@ -3,7 +3,7 @@
 // Reads from public/models/ and writes to public/models-ktx2/, mirroring the
 // directory layout so a model's URL only changes by its base directory. The
 // source files are never modified, so this is safe to re-run and safe to
-// abandon: flipping MODEL_BASE in src/config/modelBase.js back to the source
+// abandon: flipping ASSET_BASE in src/config/assetBase.js back to the source
 // directory restores the previous behaviour exactly.
 //
 // Requires:
@@ -22,8 +22,9 @@ import {
   rmSync,
   statSync,
 } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import sharp from 'sharp'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 // Invoked directly rather than through npx: npx.cmd is a shell script that
@@ -57,6 +58,40 @@ const MODELS = [
   { file: 'prediction/PredictionWheat_LOD1.glb', treatment: DISTANT, note: 'far field' },
   { file: 'prediction/PredictionWheat_LOD2.glb', treatment: DISTANT, note: 'near field' },
   { file: 'result/ResultSeedOptimized.glb', treatment: CLOSE_UP, note: 'result grain' },
+]
+
+// Standalone textures -- the ones loaded through TextureLoader rather than
+// embedded in a .glb. They are resized here rather than copied through.
+//
+// The ground maps tile 54x88 times across a flat backdrop quad that is itself
+// rendered into a blurred target at ~0.36 resolution scale, so a single tile
+// never covers more than a sliver of an already-soft buffer. 1024 is far more
+// texel density than that arrangement can resolve; ambientCG does not publish
+// Ground048 below 1K, so the downscale happens here.
+const COLOUR = 'colour'
+const NORMAL = 'normal'
+
+// Present in the source export but no longer requested by any code path, so
+// copying them into the shipped directory would be dead weight. They stay in
+// public/models/ as part of the original Ground048 set.
+const UNUSED_SOURCE_FILES = [
+  'prediction/ground/Ground048_1K-JPG_Displacement.jpg',
+  'prediction/ground/Ground048_1K-JPG_Roughness.jpg',
+]
+
+const TEXTURES = [
+  {
+    file: 'prediction/ground/Ground048_1K-JPG_Color.jpg',
+    note: 'ground colour',
+    size: 256,
+    treatment: COLOUR,
+  },
+  {
+    file: 'prediction/ground/Ground048_1K-JPG_NormalGL.jpg',
+    note: 'ground normal',
+    size: 256,
+    treatment: NORMAL,
+  },
 ]
 
 function withKtxOnPath() {
@@ -125,6 +160,61 @@ function compress(model, env) {
   return { after: kilobytes(destination), before: kilobytes(source) }
 }
 
+// sRGB is a non-linear encoding, so averaging encoded values while downscaling
+// darkens the result -- measured at mean 4/255 and max 40/255 on this texture,
+// which is a visible shift rather than a theoretical one. Resampling in scRGB
+// (linear light) and converting back afterwards is the correct order.
+async function resizeColourTexture(source, destination, size) {
+  await sharp(source)
+    .pipelineColourspace('scrgb')
+    .resize(size, size, { kernel: 'lanczos3' })
+    .toColourspace('srgb')
+    .jpeg({ chromaSubsampling: '4:4:4', quality: 90 })
+    .toFile(destination)
+}
+
+// A normal map stores vectors, not colour, so it must NOT be gamma-converted
+// on the way through. It does need renormalising afterwards: averaging
+// neighbouring unit vectors produces shorter, non-unit ones, which tilts
+// shading slightly flat. Chroma subsampling stays off for the same reason --
+// the three channels are independent vector components, not luma and chroma.
+async function resizeNormalTexture(source, destination, size) {
+  const { data, info } = await sharp(source)
+    .resize(size, size, { kernel: 'lanczos3' })
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  for (let offset = 0; offset < data.length; offset += info.channels) {
+    const x = (data[offset] / 255) * 2 - 1
+    const y = (data[offset + 1] / 255) * 2 - 1
+    const z = (data[offset + 2] / 255) * 2 - 1
+    const length = Math.hypot(x, y, z) || 1
+    data[offset] = Math.round(((x / length) * 0.5 + 0.5) * 255)
+    data[offset + 1] = Math.round(((y / length) * 0.5 + 0.5) * 255)
+    data[offset + 2] = Math.round(((z / length) * 0.5 + 0.5) * 255)
+  }
+
+  await sharp(data, {
+    raw: { channels: info.channels, height: info.height, width: info.width },
+  })
+    .jpeg({ chromaSubsampling: '4:4:4', quality: 92 })
+    .toFile(destination)
+}
+
+async function resizeTexture(texture) {
+  const source = join(SOURCE_DIR, texture.file)
+  const destination = join(OUTPUT_DIR, texture.file)
+  mkdirSync(dirname(destination), { recursive: true })
+
+  if (texture.treatment === NORMAL) {
+    await resizeNormalTexture(source, destination, texture.size)
+  } else {
+    await resizeColourTexture(source, destination, texture.size)
+  }
+
+  return { after: kilobytes(destination), before: kilobytes(source) }
+}
+
 function copyUncompressedAssets() {
   // Anything that is not a .glb (the standalone textures) is copied through
   // untouched, so the output directory is a complete drop-in replacement.
@@ -134,6 +224,12 @@ function copyUncompressedAssets() {
       const path = join(directory, entry.name)
       if (entry.isDirectory()) return walk(path)
       if (path.endsWith('.glb')) return undefined
+      // Textures with their own treatment above must not be overwritten by a
+      // copy of the full-size original. TEXTURES uses forward slashes, so the
+      // platform separator has to be normalised before comparing.
+      const fromSource = relative(SOURCE_DIR, path).split(sep).join('/')
+      if (TEXTURES.some((texture) => texture.file === fromSource)) return undefined
+      if (UNUSED_SOURCE_FILES.includes(fromSource)) return undefined
 
       const destination = join(OUTPUT_DIR, relative(SOURCE_DIR, path))
       mkdirSync(dirname(destination), { recursive: true })
@@ -146,7 +242,7 @@ function copyUncompressedAssets() {
   return copied
 }
 
-function main() {
+async function main() {
   const onlyIndex = process.argv.indexOf('--only')
   const only = onlyIndex === -1 ? null : process.argv[onlyIndex + 1]
   const env = withKtxOnPath()
@@ -182,6 +278,14 @@ function main() {
     const saved = ((1 - after / before) * 100).toFixed(0)
     console.log(`${formatSize(before)} -> ${formatSize(after)} (-${saved}%)`)
   })
+
+  for (const texture of TEXTURES) {
+    process.stdout.write(`${texture.file} (${texture.note}, ${texture.treatment} -> ${texture.size}px) ... `)
+    const { after, before } = await resizeTexture(texture)
+    totalBefore += before
+    totalAfter += after
+    console.log(`${formatSize(before)} -> ${formatSize(after)} (-${((1 - after / before) * 100).toFixed(0)}%)`)
+  }
 
   const copied = copyUncompressedAssets()
   if (copied.length > 0) {
