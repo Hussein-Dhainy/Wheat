@@ -8,7 +8,9 @@ import {
   Vector4,
 } from 'three'
 import { SCENE_TIMELINE } from '../config/sceneTimeline.js'
+import { PerformanceQualityMonitor } from './PerformanceQualityMonitor.jsx'
 import { PortalScene } from './PortalScene.jsx'
+import { getQualityProfile } from './qualityTier.js'
 import {
   createOverlayUpdateSignature,
   createWarmupTracker,
@@ -50,7 +52,9 @@ export function SceneManager({
   overlayRootRef,
   pointerRef,
   predictionTestsOpen,
+  qualityTier,
   reducedMotion,
+  reportPerformanceSample,
   resultInspectionOpen,
   resultInteractionRef,
   scrollRef,
@@ -59,6 +63,7 @@ export function SceneManager({
   selectedResultView,
 }) {
   const { camera: rootCamera, gl, size, viewport } = useThree()
+  const qualityProfile = getQualityProfile(qualityTier)
   const transitionMaterial = useRef()
   const renderTargetBPair = useRef('')
   const renderTargetLifecycle = useRef({
@@ -121,6 +126,7 @@ export function SceneManager({
     const { width, height } = getCompositorRenderTargetSize(
       drawingBufferSize.x,
       drawingBufferSize.y,
+      qualityProfile.compositorRenderScale,
     )
 
     renderTargetA.setSize(width, height)
@@ -135,6 +141,7 @@ export function SceneManager({
     drawingBufferSize,
     gl,
     portalCameras,
+    qualityProfile.compositorRenderScale,
     renderTargetA,
     renderTargetB,
     size.height,
@@ -301,6 +308,12 @@ export function SceneManager({
 
   return (
     <>
+      <PerformanceQualityMonitor
+        enabled={entered}
+        onSample={reportPerformanceSample}
+        qualityTier={qualityTier}
+      />
+
       {SCENE_REGISTRY.map((entry, index) => (
         <PortalScene
           key={entry.id}
@@ -312,6 +325,7 @@ export function SceneManager({
           onSceneWarmupComplete={warmupTracker.markComplete}
           pointerRef={pointerRef}
           predictionTestsOpen={predictionTestsOpen}
+          qualityTier={qualityTier}
           reducedMotion={reducedMotion}
           resultInspectionOpen={resultInspectionOpen}
           resultInteractionRef={resultInteractionRef}

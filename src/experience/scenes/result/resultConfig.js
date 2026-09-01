@@ -42,6 +42,7 @@ export const RESULT_SCENE_CONFIG = {
     particleCameraTravel: 3.25,
     particleFadeRange: [0.32, 0.9],
     rotationDamping: 5.8,
+    viewRotationDuration: 1.15,
     dragRadiansPerPixel: 0.0085,
     viewStep: 2.0943951023931953,
     orbit: {

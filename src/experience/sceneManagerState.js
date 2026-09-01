@@ -26,6 +26,7 @@ export const SCENE_VISIBILITY_ENTER_EVENT = 'wheat:scene-visibility-enter'
 export const GENETICS_BRIDGE_ENTER_EVENT = 'wheat:genetics-bridge-enter'
 export const GENETICS_BRIDGE_EXIT_EVENT = 'wheat:genetics-bridge-exit'
 export const GENETICS_INTRO_ENTER_EVENT = 'wheat:genetics-intro-enter'
+export const GENETICS_INTRO_EXIT_EVENT = 'wheat:genetics-intro-exit'
 
 export function createRenderTarget(name) {
   const target = new WebGLRenderTarget(1, 1, {
@@ -320,6 +321,9 @@ export function updateOverlayLayers(root, cache, transition) {
   layers.forEach((layer, index) => {
     const isCurrentGeneticsScene = index === transition.currentIndex
       && SCENE_REGISTRY[index].id === 'genetics'
+    const geneticsIntroWasActive = (
+      layer.dataset.geneticsIntroActive === 'true'
+    )
     const geneticsIntroIsActive = isCurrentGeneticsScene
       && isGeneticsIntroActive(transition.sceneProgress)
     updateDataset(
@@ -327,6 +331,15 @@ export function updateOverlayLayers(root, cache, transition) {
       'geneticsIntroActive',
       geneticsIntroIsActive ? 'true' : 'false',
     )
+    if (!geneticsIntroIsActive && geneticsIntroWasActive) {
+      layer.dispatchEvent(new CustomEvent(GENETICS_INTRO_EXIT_EVENT, {
+        detail: {
+          progress: transition.sceneProgress,
+          sceneId: SCENE_REGISTRY[index].id,
+          sceneIndex: index,
+        },
+      }))
+    }
     const previousGeneticsProgress = Number.parseFloat(
       layer.dataset.geneticsIntroProgress,
     )

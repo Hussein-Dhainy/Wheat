@@ -10,7 +10,7 @@ import {
 } from 'three'
 import { DNACameraRig } from '../../camera/DNACameraRig.jsx'
 import { createDNAGeometry } from './createDNAGeometry.js'
-import { DNA_RENDER_CONFIG } from './dnaConfig.js'
+import { DNA_RENDER_CONFIG, getDNAQualityProfile } from './dnaConfig.js'
 import dnaFragmentShader from './dnaFragment.glsl?raw'
 import dnaHaloFragmentShader from './dnaHaloFragment.glsl?raw'
 import dnaParticleFragmentShader from './dnaParticleFragment.glsl?raw'
@@ -64,10 +64,12 @@ export default function DNAHelix({
   geneticsDetailOpen,
   onSelectGeneticsSeed,
   pointerRef,
+  quality,
   reducedMotion,
   sceneStateRef,
   selectedGeneticsSeed,
 }) {
+  const qualityProfile = getDNAQualityProfile(quality)
   const dnaReference = useRef()
   const dnaDetailTransitionReference = useRef()
   const backgroundReference = useRef()
@@ -123,17 +125,17 @@ export default function DNAHelix({
       minimumRibbonOpacity: DNA_RENDER_CONFIG.minimumRibbonOpacity,
       minimumRibbonWidth: DNA_RENDER_CONFIG.minimumRibbonWidth,
       movementAmplitude: 0.12,
-      particlesPerFiber: DNA_RENDER_CONFIG.particlesPerFiber,
+      particlesPerFiber: qualityProfile.particlesPerFiber,
       primaryNoiseFrequency: 4,
       pulseAmount: 0.12,
       pulseCount: 12,
       radius: 0.8,
       seed: 12345,
-      segments: 250,
-      strandCount: 30,
+      segments: qualityProfile.segments,
+      strandCount: qualityProfile.strandCount,
       turns: 0.75,
     })
-  }, [])
+  }, [qualityProfile])
 
   // Static, config-authored highlights, pinned to the DNA's structure.
   const lightSpots = useMemo(() => ({
@@ -215,12 +217,6 @@ export default function DNAHelix({
   }, [geometries])
 
   useFrame(({ gl }, deltaTime) => {
-    gl.getDrawingBufferSize(renderResolution.current)
-    const pixelRatio = gl.getPixelRatio()
-    haloUniforms.uPixelRatio.value = pixelRatio
-    ribbonUniforms.uPixelRatio.value = pixelRatio
-    particleUniforms.uPixelRatio.value = pixelRatio
-
     const sceneState = sceneStateRef?.current
     if (!dnaReference.current || !sceneState) return
 
@@ -245,6 +241,12 @@ export default function DNAHelix({
       }
       return
     }
+
+    gl.getDrawingBufferSize(renderResolution.current)
+    const pixelRatio = gl.getPixelRatio()
+    haloUniforms.uPixelRatio.value = pixelRatio
+    ribbonUniforms.uPixelRatio.value = pixelRatio
+    particleUniforms.uPixelRatio.value = pixelRatio
 
     // Normalized so 1.0 lands exactly 2 scroll units into the scene's
     // single 3-unit-long section, instead of at the section's own end.
@@ -410,15 +412,18 @@ export default function DNAHelix({
       <DNAHaze />
       <DNABokehParticles
         entryFlowRef={entryParticleFlow}
+        particleCount={qualityProfile.bokehParticleCount}
         reducedMotion={reducedMotion}
         sceneStateRef={sceneStateRef}
       />
       <DNABackgroundParticles
         entryFlowRef={entryParticleFlow}
+        particleCount={qualityProfile.backgroundParticleCount}
         reducedMotion={reducedMotion}
         sceneStateRef={sceneStateRef}
       />
       <DNAParticleTrails
+        densityScale={qualityProfile.trailDensity}
         entryFlowRef={entryParticleFlow}
         reducedMotion={reducedMotion}
         sceneStateRef={sceneStateRef}

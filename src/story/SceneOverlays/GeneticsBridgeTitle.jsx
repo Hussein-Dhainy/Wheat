@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { GENETICS_BRIDGE_TIMING } from '../../config/geneticsSeeds.js'
 import { LANDING_INTRO } from '../../config/landingIntro.js'
 import {
   GENETICS_BRIDGE_ENTER_EVENT,
@@ -17,12 +18,14 @@ import {
 const TITLE_LINES = ['COMPUTERS', 'NARROW THE', 'CANDIDATES.']
 const TITLE_BOX = computeBoldTitleBox(TITLE_LINES)
 const ENTRY_DELAY_MS = 90
+const EXIT_RESET_BUFFER_MS = 40
 
 export function GeneticsBridgeTitle({ fallback }) {
   const bridgeRef = useRef(null)
   const titleParticles = useRef(null)
   const replayFrame = useRef(0)
   const replayTimer = useRef(0)
+  const resetTimer = useRef(0)
   const bridgeIsActive = useRef(fallback)
   const [introState, setIntroState] = useState(
     fallback ? 'complete' : 'waiting',
@@ -32,15 +35,28 @@ export function GeneticsBridgeTitle({ fallback }) {
     bridgeIsActive.current = false
     cancelAnimationFrame(replayFrame.current)
     window.clearTimeout(replayTimer.current)
+    window.clearTimeout(resetTimer.current)
     titleParticles.current?.setHoldActive(false)
     titleParticles.current?.park()
-    setIntroState('waiting')
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setIntroState('waiting')
+      return
+    }
+
+    // Keep the completed glyphs rendered while the wrapper fades. Resetting
+    // the particle intro on this same frame would make the title disappear
+    // before the opacity transition has anything left to animate.
+    resetTimer.current = window.setTimeout(() => {
+      if (!bridgeIsActive.current) setIntroState('waiting')
+    }, GENETICS_BRIDGE_TIMING.fadeDurationMs + EXIT_RESET_BUFFER_MS)
   }, [])
 
   const replayIntro = useCallback(() => {
     bridgeIsActive.current = true
     cancelAnimationFrame(replayFrame.current)
     window.clearTimeout(replayTimer.current)
+    window.clearTimeout(resetTimer.current)
     titleParticles.current?.setHoldActive(false)
     titleParticles.current?.park()
     setIntroState('waiting')
@@ -70,6 +86,7 @@ export function GeneticsBridgeTitle({ fallback }) {
       bridgeIsActive.current = false
       cancelAnimationFrame(replayFrame.current)
       window.clearTimeout(replayTimer.current)
+      window.clearTimeout(resetTimer.current)
       sceneLayer.removeEventListener(GENETICS_BRIDGE_ENTER_EVENT, replayIntro)
       sceneLayer.removeEventListener(GENETICS_BRIDGE_EXIT_EVENT, resetIntro)
     }
@@ -81,6 +98,9 @@ export function GeneticsBridgeTitle({ fallback }) {
       data-intro-state={introState}
       aria-hidden={!fallback && introState === 'waiting'}
       ref={bridgeRef}
+      style={{
+        '--genetics-bridge-fade-duration': `${GENETICS_BRIDGE_TIMING.fadeDurationMs}ms`,
+      }}
     >
       <div className={styles.geneticsBridgeCopy}>
         <TitleParticleText

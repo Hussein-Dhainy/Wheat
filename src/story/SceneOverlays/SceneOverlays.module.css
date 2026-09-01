@@ -1403,7 +1403,7 @@
     var(--scene-visibility, 1)
   );
   pointer-events: none;
-  transition: opacity 120ms linear;
+  transition: opacity 520ms ease-out;
   will-change: opacity;
 }
 
@@ -1661,8 +1661,8 @@
   opacity: 0;
   pointer-events: none;
   transition:
-    opacity 420ms ease,
-    visibility 0s linear 420ms;
+    opacity var(--genetics-bridge-fade-duration, 520ms) ease-out,
+    visibility 0s linear var(--genetics-bridge-fade-duration, 520ms);
   visibility: hidden;
 }
 
@@ -1670,7 +1670,7 @@
 .fallback .geneticsBridge {
   opacity: 1;
   transition:
-    opacity 420ms ease,
+    opacity var(--genetics-bridge-fade-duration, 520ms) ease-out,
     visibility 0s linear 0s;
   visibility: visible;
 }

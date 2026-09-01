@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { LANDING_INTRO } from '../../config/landingIntro.js'
 import {
   GENETICS_INTRO_ENTER_EVENT,
+  GENETICS_INTRO_EXIT_EVENT,
   SCENE_DOMINANCE_EXIT_EVENT,
   SCENE_VISIBILITY_ENTER_EVENT,
 } from '../../experience/sceneManagerState.js'
@@ -172,6 +173,7 @@ export function GeneticsIntro({
   const titleParticles = useRef(null)
   const detailTitleParticles = useRef(null)
   const [introState, setIntroState] = useState(fallback ? 'playing' : 'waiting')
+  const [introEffectsActive, setIntroEffectsActive] = useState(fallback)
   const [detailIntroState, setDetailIntroState] = useState(
     fallback ? 'complete' : 'waiting',
   )
@@ -185,6 +187,7 @@ export function GeneticsIntro({
   }
 
   const replayIntro = useCallback(() => {
+    setIntroEffectsActive(true)
     titleParticles.current?.setHoldActive(false)
     titleParticles.current?.park()
     setControlsReady(false)
@@ -203,7 +206,14 @@ export function GeneticsIntro({
     }, ENTRY_DELAY_MS)
   }, [])
 
+  const pauseIntroEffects = useCallback(() => {
+    titleParticles.current?.setHoldActive(false)
+    titleParticles.current?.park()
+    setIntroEffectsActive(false)
+  }, [])
+
   const resetDetailForSceneExit = useCallback(() => {
+    pauseIntroEffects()
     setGeneticsDetailOpen(false)
     setDetailIntroState(fallback ? 'complete' : 'waiting')
     restoreTriggerFocus.current = false
@@ -214,13 +224,14 @@ export function GeneticsIntro({
     ) {
       document.activeElement.blur()
     }
-  }, [fallback, setGeneticsDetailOpen])
+  }, [fallback, pauseIntroEffects, setGeneticsDetailOpen])
 
   useEffect(() => {
     const sceneLayer = experienceRef.current?.closest('[data-scene-layer]')
     if (!sceneLayer || fallback) return undefined
 
     sceneLayer.addEventListener(GENETICS_INTRO_ENTER_EVENT, replayIntro)
+    sceneLayer.addEventListener(GENETICS_INTRO_EXIT_EVENT, pauseIntroEffects)
     sceneLayer.addEventListener(SCENE_VISIBILITY_ENTER_EVENT, replayIntro)
     sceneLayer.addEventListener(
       SCENE_DOMINANCE_EXIT_EVENT,
@@ -230,13 +241,14 @@ export function GeneticsIntro({
       cancelAnimationFrame(replayFrame.current)
       window.clearTimeout(replayTimer.current)
       sceneLayer.removeEventListener(GENETICS_INTRO_ENTER_EVENT, replayIntro)
+      sceneLayer.removeEventListener(GENETICS_INTRO_EXIT_EVENT, pauseIntroEffects)
       sceneLayer.removeEventListener(SCENE_VISIBILITY_ENTER_EVENT, replayIntro)
       sceneLayer.removeEventListener(
         SCENE_DOMINANCE_EXIT_EVENT,
         resetDetailForSceneExit,
       )
     }
-  }, [fallback, replayIntro, resetDetailForSceneExit])
+  }, [fallback, pauseIntroEffects, replayIntro, resetDetailForSceneExit])
 
   useEffect(() => {
     if (fallback || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -333,7 +345,7 @@ export function GeneticsIntro({
             as="h2"
             baseline={INTRO_TITLE_BOX.baseline}
             className={styles.geneticsTitleLines}
-            effectsEnabled={introState === 'complete'}
+            effectsEnabled={introEffectsActive && introState === 'complete'}
             fontSize={BOLD_TITLE_FONT_SIZE}
             fontWeight={BOLD_TITLE_FONT_WEIGHT}
             headingId="genetics-title"

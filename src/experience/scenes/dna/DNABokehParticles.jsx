@@ -6,7 +6,6 @@ import { DNA_RENDER_CONFIG } from './dnaConfig.js'
 import bokehParticleFragmentShader from './bokehParticleFragment.glsl?raw'
 import bokehParticleVertexShader from './bokehParticleVertex.glsl?raw'
 
-const BOKEH_PARTICLE_COUNT = 180
 const BOKEH_PARTICLE_SEED = 63827
 // Furthest-back, largest layer — moves the most of the three particle
 // systems to sell the strongest parallax.
@@ -69,20 +68,20 @@ function chooseWeightedCluster(random) {
   return BOKEH_CLUSTERS[BOKEH_CLUSTERS.length - 1]
 }
 
-function createBokehAttributes() {
+function createBokehAttributes(particleCount) {
   const random = createSeededRandom(BOKEH_PARTICLE_SEED)
-  const positions = new Float32Array(BOKEH_PARTICLE_COUNT * 3)
-  const sizes = new Float32Array(BOKEH_PARTICLE_COUNT)
-  const opacities = new Float32Array(BOKEH_PARTICLE_COUNT)
-  const colorMixes = new Float32Array(BOKEH_PARTICLE_COUNT)
-  const phases = new Float32Array(BOKEH_PARTICLE_COUNT)
-  const driftSpeeds = new Float32Array(BOKEH_PARTICLE_COUNT)
-  const orbitCenters = new Float32Array(BOKEH_PARTICLE_COUNT * 2)
-  const orbitSpeeds = new Float32Array(BOKEH_PARTICLE_COUNT)
+  const positions = new Float32Array(particleCount * 3)
+  const sizes = new Float32Array(particleCount)
+  const opacities = new Float32Array(particleCount)
+  const colorMixes = new Float32Array(particleCount)
+  const phases = new Float32Array(particleCount)
+  const driftSpeeds = new Float32Array(particleCount)
+  const orbitCenters = new Float32Array(particleCount * 2)
+  const orbitSpeeds = new Float32Array(particleCount)
 
   for (
     let particleIndex = 0;
-    particleIndex < BOKEH_PARTICLE_COUNT;
+    particleIndex < particleCount;
     particleIndex += 1
   ) {
     const positionIndex = particleIndex * 3
@@ -135,12 +134,16 @@ function createBokehAttributes() {
 
 export default function DNABokehParticles({
   entryFlowRef,
+  particleCount,
   reducedMotion,
   sceneStateRef,
 }) {
   const activeTime = useRef(0)
   const materialReference = useRef()
-  const attributes = useMemo(createBokehAttributes, [])
+  const attributes = useMemo(
+    () => createBokehAttributes(particleCount),
+    [particleCount],
+  )
   const uniforms = useMemo(() => ({
     uDeepTeal: { value: new Color('#063d32') },
     uForestGreen: { value: new Color('#0b6847') },
@@ -160,10 +163,9 @@ export default function DNABokehParticles({
 
   useFrame(({ gl }, deltaTime) => {
     if (!materialReference.current) return
+    if (!sceneStateRef?.current?.isActive) return
 
     materialReference.current.uniforms.uPixelRatio.value = gl.getPixelRatio()
-
-    if (!sceneStateRef?.current?.isActive) return
 
     const sceneProgress = reducedMotion
       ? Math.min(1, Math.max(0, sceneStateRef.current.progress))
@@ -187,7 +189,7 @@ export default function DNABokehParticles({
 
   return (
     <points frustumCulled={false} renderOrder={-2}>
-      <bufferGeometry>
+      <bufferGeometry key={particleCount}>
         <bufferAttribute
           attach="attributes-position"
           args={[attributes.positions, 3]}

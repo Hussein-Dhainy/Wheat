@@ -13,6 +13,7 @@ import { prepareGrainMaterial } from '../src/experience/systems/wheatGrain.js'
 import {
   getNearestResultViewRotation,
   getResultOrbitMarkerAngle,
+  interpolateResultViewRotation,
   snapResultView,
 } from '../src/experience/scenes/result/resultInspection.js'
 
@@ -107,6 +108,19 @@ test('grain rotation snaps to the closest of three repeatable views', () => {
   assert.equal(snapped.index, 1)
   assert.equal(snapped.rotation, step)
   assert.equal(getNearestResultViewRotation(step * 2, 0, step, 3), step * 3)
+})
+
+test('button-selected grain views ease smoothly between rotations', () => {
+  const duration = RESULT_SCENE_CONFIG.inspection.viewRotationDuration
+  const from = 0
+  const to = RESULT_SCENE_CONFIG.inspection.viewStep
+
+  assert.ok(duration >= 1)
+  assert.equal(interpolateResultViewRotation(from, to, 0), from)
+  assert.equal(interpolateResultViewRotation(from, to, 0.5), to * 0.5)
+  assert.equal(interpolateResultViewRotation(from, to, 1), to)
+  assert.ok(interpolateResultViewRotation(from, to, 0.25) < to * 0.25)
+  assert.ok(interpolateResultViewRotation(from, to, 0.75) > to * 0.75)
 })
 
 test('each snapped orbit marker resolves to the camera-facing phase', () => {

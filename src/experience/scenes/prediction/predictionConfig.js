@@ -28,11 +28,27 @@ export const PREDICTION_RENDER_CONFIG = {
   },
   backdrop: {
     // Blur the complete environmental plate, not individual plant meshes.
-    // The hero is rendered afterward and therefore remains fully sharp.
-    blurIterations: 3,
-    blurRadius: 3.8,
+    // The hero is rendered afterward and therefore remains fully sharp. One
+    // separable pair replaces the former repeated pairs; radii compensate for
+    // the lower target resolution so the apparent softness stays comparable.
     planeZ: -0.18,
-    resolutionScale: 0.44,
+    quality: {
+      high: {
+        blurRadius: 5.4,
+        refreshIntervalFrames: 2,
+        resolutionScale: 0.36,
+      },
+      medium: {
+        blurRadius: 4.5,
+        refreshIntervalFrames: 2,
+        resolutionScale: 0.32,
+      },
+      low: {
+        blurRadius: 3.3,
+        refreshIntervalFrames: 2,
+        resolutionScale: 0.28,
+      },
+    },
   },
   camera: {
     x: 0,

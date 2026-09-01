@@ -31,6 +31,13 @@ export function getResultOrbitMarkerAngle(viewIndex, viewStep) {
   return Math.PI / 2 + viewIndex * viewStep
 }
 
+export function interpolateResultViewRotation(from, to, progress) {
+  const clampedProgress = Math.max(0, Math.min(1, progress))
+  const easedProgress = clampedProgress * clampedProgress
+    * (3 - 2 * clampedProgress)
+  return from + (to - from) * easedProgress
+}
+
 // Closing inspection always returns to "no offset" (rotation 0), but the
 // grain may have been spun through several full turns while it was open.
 // Snapping to the nearest whole-turn equivalent of 0 — rather than the

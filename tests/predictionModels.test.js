@@ -18,6 +18,10 @@ import {
   getPredictionShadowOpacity,
 } from '../src/experience/scenes/prediction/predictionPlantShadows.js'
 import {
+  createBackdropRefreshState,
+  shouldRefreshBackdrop,
+} from '../src/experience/scenes/prediction/predictionBackdropPerformance.js'
+import {
   installFieldWeatherMaterial,
   updateFieldWeatherUniforms,
 } from '../src/experience/scenes/prediction/fieldWeatherMaterial.js'
@@ -81,15 +85,39 @@ test('projected shadows cover every field plant plus the hero', () => {
   )
 })
 
-test('the complete environment uses one strong backdrop blur', () => {
-  assert.ok(CONFIG.backdrop.blurIterations >= 3)
-  assert.equal(CONFIG.backdrop.blurRadius, 3.8)
-  assert.equal(CONFIG.backdrop.resolutionScale, 0.44)
+test('the complete environment uses one lower-resolution half-rate blur pair', () => {
+  assert.equal(CONFIG.backdrop.quality.high.refreshIntervalFrames, 2)
+  assert.equal(CONFIG.backdrop.quality.medium.refreshIntervalFrames, 2)
+  assert.equal(CONFIG.backdrop.quality.low.refreshIntervalFrames, 2)
+  assert.equal(CONFIG.backdrop.quality.high.resolutionScale, 0.36)
+  assert.ok(
+    CONFIG.backdrop.quality.high.blurRadius
+      > CONFIG.backdrop.quality.medium.blurRadius,
+  )
+  assert.ok(
+    CONFIG.backdrop.quality.medium.blurRadius
+      > CONFIG.backdrop.quality.low.blurRadius,
+  )
+  assert.ok(
+    CONFIG.backdrop.quality.low.resolutionScale
+      < CONFIG.backdrop.quality.high.resolutionScale,
+  )
 
   CONFIG.field.layers.forEach((layer) => {
     assert.equal(layer.blurIterations, undefined)
     assert.equal(layer.blurRadius, undefined)
   })
+})
+
+test('the blurred backdrop refreshes immediately on entry then every other frame', () => {
+  const state = createBackdropRefreshState()
+
+  assert.equal(shouldRefreshBackdrop(state, false, 2), false)
+  assert.equal(shouldRefreshBackdrop(state, true, 2), true)
+  assert.equal(shouldRefreshBackdrop(state, true, 2), false)
+  assert.equal(shouldRefreshBackdrop(state, true, 2), true)
+  assert.equal(shouldRefreshBackdrop(state, false, 2), false)
+  assert.equal(shouldRefreshBackdrop(state, true, 2), true)
 })
 
 test('the joined LOD mesh becomes one reusable instanced field asset', () => {

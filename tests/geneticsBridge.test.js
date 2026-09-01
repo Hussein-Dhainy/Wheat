@@ -32,7 +32,9 @@ test('the Scene 2 editorial title owns the space between DNA and seeds', () => {
 
   assert.ok(bridgeStart < bridgeEnd)
   assert.ok(bridgeStart < 0.4)
+  assert.ok(bridgeEnd <= 0.7)
   assert.ok(bridgeEnd < seedStart)
+  assert.ok(GENETICS_BRIDGE_TIMING.fadeDurationMs >= 400)
   assert.equal(isGeneticsBridgeActive(bridgeStart - 0.001), false)
   assert.equal(isGeneticsBridgeActive(bridgeStart), true)
   assert.equal(isGeneticsBridgeActive((bridgeStart + bridgeEnd) / 2), true)

@@ -54,7 +54,8 @@ export function crossedIntoGeneticsIntro(previousProgress, progress) {
 // Scene 2's DNA introduction clears near 40%, while the selectable seed views
 // do not begin until 80%. This editorial beat owns the space between them.
 export const GENETICS_BRIDGE_TIMING = {
-  activeRange: [0.38, 0.74],
+  activeRange: [0.38, 0.7],
+  fadeDurationMs: 520,
 }
 
 export function isGeneticsBridgeActive(progress) {

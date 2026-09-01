@@ -614,6 +614,7 @@ export function PredictionScene({
     <>
       <PredictionBackdrop
         onWarmupComplete={onSceneWarmupComplete}
+        quality={quality}
         sceneStateRef={sceneStateRef}
       >
         <color ref={backgroundColorRef} attach="background" args={[background]} />

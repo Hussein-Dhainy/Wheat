@@ -19,7 +19,10 @@ import {
   createNetworkUniforms,
   smootherRange,
 } from './resultGeometry.js'
-import { getNearestRestRotation } from './resultInspection.js'
+import {
+  getNearestRestRotation,
+  interpolateResultViewRotation,
+} from './resultInspection.js'
 import resultNetworkFragmentShader from './resultNetworkFragment.glsl?raw'
 import resultNetworkVertexShader from './resultNetworkVertex.glsl?raw'
 import { StaticPointCloud } from './StaticPointCloud.jsx'
@@ -40,6 +43,13 @@ export function ResultScene({
   const grainGroupRef = useRef()
   const grainRef = useRef()
   const grainInspectionRotation = useRef(0)
+  const grainRotationTransition = useRef({
+    active: false,
+    elapsed: 0,
+    from: 0,
+    requestId: resultInteractionRef?.current?.rotationTransitionId ?? 0,
+    to: 0,
+  })
   const inspectionMixRef = useRef(0)
   const inspectionOrbitRef = useRef()
   const orbitMarkerCoreMaterialRef = useRef()
@@ -207,14 +217,43 @@ export function ResultScene({
     const targetInspectionRotation = resultInspectionOpen
       ? interaction?.rotationTarget ?? 0
       : getNearestRestRotation(grainInspectionRotation.current)
-    grainInspectionRotation.current = reducedMotion
-      ? targetInspectionRotation
-      : MathUtils.damp(
+    const rotationTransition = grainRotationTransition.current
+    const rotationTransitionId = interaction?.rotationTransitionId ?? 0
+
+    if (reducedMotion || interaction?.dragging) {
+      rotationTransition.active = false
+      rotationTransition.requestId = rotationTransitionId
+    } else if (rotationTransitionId !== rotationTransition.requestId) {
+      rotationTransition.active = true
+      rotationTransition.elapsed = 0
+      rotationTransition.from = grainInspectionRotation.current
+      rotationTransition.requestId = rotationTransitionId
+      rotationTransition.to = targetInspectionRotation
+    }
+
+    if (reducedMotion) {
+      grainInspectionRotation.current = targetInspectionRotation
+    } else if (rotationTransition.active) {
+      rotationTransition.elapsed += delta
+      const rotationProgress = Math.min(
+        1,
+        rotationTransition.elapsed / CONFIG.inspection.viewRotationDuration,
+      )
+      grainInspectionRotation.current = interpolateResultViewRotation(
+        rotationTransition.from,
+        rotationTransition.to,
+        rotationProgress,
+      )
+      if (rotationProgress >= 1) rotationTransition.active = false
+    } else {
+      grainInspectionRotation.current = MathUtils.damp(
         grainInspectionRotation.current,
         targetInspectionRotation,
         CONFIG.inspection.rotationDamping,
         delta,
       )
+    }
+    if (interaction) interaction.rotationCurrent = grainInspectionRotation.current
     grainRef.current.rotation.set(
       CONFIG.grain.baseRotation[0]
         + (reducedMotion || resultInspectionOpen

@@ -117,11 +117,6 @@ const TRAIL_DEFINITIONS = [
   },
 ]
 
-const TOTAL_PARTICLE_COUNT = TRAIL_DEFINITIONS.reduce(
-  (total, trail) => total + trail.particleCount,
-  0,
-)
-
 function createSeededRandom(seed) {
   let value = seed >>> 0
 
@@ -159,21 +154,32 @@ function createLoopControlPoints(loop, random) {
   return points
 }
 
-function createTrailAttributes() {
+function createTrailAttributes(densityScale) {
   const random = createSeededRandom(TRAIL_SEED)
-  const positions = new Float32Array(TOTAL_PARTICLE_COUNT * 3)
-  const sizes = new Float32Array(TOTAL_PARTICLE_COUNT)
-  const opacities = new Float32Array(TOTAL_PARTICLE_COUNT)
-  const colorMixes = new Float32Array(TOTAL_PARTICLE_COUNT)
-  const trailProgresses = new Float32Array(TOTAL_PARTICLE_COUNT)
-  const trailPhases = new Float32Array(TOTAL_PARTICLE_COUNT)
-  const driftSpeeds = new Float32Array(TOTAL_PARTICLE_COUNT)
-  const orbitCenters = new Float32Array(TOTAL_PARTICLE_COUNT * 2)
-  const orbitSpeeds = new Float32Array(TOTAL_PARTICLE_COUNT)
+  const trailDefinitions = TRAIL_DEFINITIONS.map((definition) => ({
+    ...definition,
+    particleCount: Math.max(
+      definition.closed ? 12 : 8,
+      Math.round(definition.particleCount * densityScale),
+    ),
+  }))
+  const totalParticleCount = trailDefinitions.reduce(
+    (total, trail) => total + trail.particleCount,
+    0,
+  )
+  const positions = new Float32Array(totalParticleCount * 3)
+  const sizes = new Float32Array(totalParticleCount)
+  const opacities = new Float32Array(totalParticleCount)
+  const colorMixes = new Float32Array(totalParticleCount)
+  const trailProgresses = new Float32Array(totalParticleCount)
+  const trailPhases = new Float32Array(totalParticleCount)
+  const driftSpeeds = new Float32Array(totalParticleCount)
+  const orbitCenters = new Float32Array(totalParticleCount * 2)
+  const orbitSpeeds = new Float32Array(totalParticleCount)
 
   let particleIndex = 0
 
-  TRAIL_DEFINITIONS.forEach((trailDefinition, trailIndex) => {
+  trailDefinitions.forEach((trailDefinition, trailIndex) => {
     const controlPoints = trailDefinition.loop
       ? createLoopControlPoints(trailDefinition.loop, random)
       : trailDefinition.points.map((point) => (
@@ -251,13 +257,17 @@ function createTrailAttributes() {
 }
 
 export default function DNAParticleTrails({
+  densityScale,
   entryFlowRef,
   reducedMotion,
   sceneStateRef,
 }) {
   const activeTime = useRef(0)
   const materialReference = useRef()
-  const attributes = useMemo(createTrailAttributes, [])
+  const attributes = useMemo(
+    () => createTrailAttributes(densityScale),
+    [densityScale],
+  )
   const uniforms = useMemo(() => ({
     uDeepGreen: { value: new Color('#08704f') },
     uEmerald: { value: new Color('#22e596') },
@@ -277,10 +287,9 @@ export default function DNAParticleTrails({
   }), [])
   useFrame(({ gl }, deltaTime) => {
     if (!materialReference.current) return
+    if (!sceneStateRef?.current?.isActive) return
 
     materialReference.current.uniforms.uPixelRatio.value = gl.getPixelRatio()
-
-    if (!sceneStateRef?.current?.isActive) return
 
     const sceneProgress = reducedMotion
       ? Math.min(1, Math.max(0, sceneStateRef.current.progress))
@@ -304,7 +313,7 @@ export default function DNAParticleTrails({
 
   return (
     <points frustumCulled={false} renderOrder={-1}>
-      <bufferGeometry>
+      <bufferGeometry key={densityScale}>
         <bufferAttribute attach="attributes-position" args={[attributes.positions, 3]} />
         <bufferAttribute attach="attributes-aSize" args={[attributes.sizes, 1]} />
         <bufferAttribute attach="attributes-aOpacity" args={[attributes.opacities, 1]} />

@@ -9,16 +9,16 @@ const DOM_DELTA_LINE = 1
 const DOM_DELTA_PAGE = 2
 
 export const VIRTUAL_SCROLL = {
-  // Lower = slower catch-up to the target, so motion keeps visibly drifting
-  // for longer after each wheel tick instead of settling almost instantly.
-  damping: 2,
+  // Keep a little cinematic easing without making wheel/touch input feel as
+  // though it is waiting for the camera to catch up.
+  damping: 4.5,
   freeScrollKeyboardStep: 0.5,
   // Slow only the displayed diagonal wipe. Its timeline length stays fixed,
   // so wheel and touch still require the same amount of input as before.
-  transitionDamping: 1.25,
+  transitionDamping: 3.25,
   // Direct input stays fully continuous inside scenes. If wheel input stops
   // inside a diagonal wipe, settle to one of its fully visible endpoints.
-  transitionSettleDamping: 1.8,
+  transitionSettleDamping: 4.5,
   transitionSettleDelaySeconds: 0.14,
   touchScreensPerViewport: 1.15,
   wheelPixelLimit: 100,
@@ -29,7 +29,8 @@ export const VIRTUAL_SCROLL = {
 
 // Menu-triggered jumps read as a deliberate, cinematic pan rather than the
 // snappy response direct scroll input needs — much lower than the default.
-const MENU_JUMP_DAMPING = 0.85
+const MENU_JUMP_DAMPING = 3.2
+const SETTLE_EPSILON = 0.0005
 
 const INTEGER_SNAP_TIMELINE = Object.freeze({
   cycleLength: 1,
@@ -360,7 +361,11 @@ export function advanceVirtualScroll(
     const amount = 1 - Math.exp(-effectiveDamping * frameDelta)
     state.current += (state.target - state.current) * amount
 
-    if (Math.abs(state.target - state.current) < 1e-7) {
+    // Damped motion approaches its target asymptotically. Completing the final
+    // sub-pixel-equivalent distance is visually imperceptible, and is crucial
+    // at exact scene boundaries where the previous and next portals would
+    // otherwise both remain active for many extra frames.
+    if (Math.abs(state.target - state.current) <= SETTLE_EPSILON) {
       state.current = state.target
       state.isSnapping = false
     }

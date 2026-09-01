@@ -43,6 +43,12 @@ const INSPECTION_TITLES = RESULT_CONTENT.inspection.views.map((view) => {
   }
 })
 
+function requestResultRotationTransition(interaction) {
+  interaction.rotationTransitionId = (
+    interaction.rotationTransitionId ?? 0
+  ) + 1
+}
+
 export function ResultExperience({
   fallback,
   resultInspectionOpen,
@@ -200,6 +206,7 @@ export function ResultExperience({
       viewStep,
       viewCount,
     )
+    requestResultRotationTransition(interaction)
     setResultInspectionOpen(true)
     if (focusClose) requestAnimationFrame(() => closeRef.current?.focus())
   }
@@ -241,6 +248,7 @@ export function ResultExperience({
     // stored target doesn't stay parked several full turns away, ready to
     // spin wildly to "catch up" the next time inspection opens.
     interaction.rotationTarget = getNearestRestRotation(interaction.rotationTarget)
+    requestResultRotationTransition(interaction)
     setResultInspectionOpen(false)
     setResultControlExiting(false)
     if (fallback || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -267,11 +275,12 @@ export function ResultExperience({
     const interaction = resultInteractionRef.current
     interaction.dragging = false
     interaction.rotationTarget = getNearestResultViewRotation(
-      interaction.rotationTarget,
+      interaction.rotationCurrent ?? interaction.rotationTarget,
       viewIndex,
       viewStep,
       viewCount,
     )
+    requestResultRotationTransition(interaction)
     setSelectedResultView(viewIndex)
   }, [resultInteractionRef, setSelectedResultView, viewCount, viewStep])
 
@@ -289,6 +298,7 @@ export function ResultExperience({
       viewCount,
     )
     interaction.rotationTarget = snapped.rotation
+    requestResultRotationTransition(interaction)
     setSelectedResultView(snapped.index)
   }, [resultInteractionRef, setSelectedResultView, viewCount, viewStep])
 
@@ -298,7 +308,8 @@ export function ResultExperience({
     const interaction = resultInteractionRef.current
     interaction.dragging = true
     interaction.pointerStartX = event.clientX
-    interaction.rotationStart = interaction.rotationTarget
+    interaction.rotationStart = interaction.rotationCurrent
+      ?? interaction.rotationTarget
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 

@@ -9,6 +9,7 @@ export function PortalScene({
   onSceneWarmupComplete,
   pointerRef,
   predictionTestsOpen,
+  qualityTier,
   reducedMotion,
   resultInspectionOpen,
   resultInteractionRef,
@@ -29,7 +30,7 @@ export function PortalScene({
       onSceneWarmupComplete={onSceneWarmupComplete}
       pointerRef={pointerRef}
       predictionTestsOpen={predictionTestsOpen}
-      quality="high"
+      quality={qualityTier}
       reducedMotion={reducedMotion}
       resultInspectionOpen={resultInspectionOpen}
       resultInteractionRef={resultInteractionRef}

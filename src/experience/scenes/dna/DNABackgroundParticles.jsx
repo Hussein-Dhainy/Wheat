@@ -6,7 +6,6 @@ import { DNA_RENDER_CONFIG } from './dnaConfig.js'
 import backgroundParticleFragmentShader from './backgroundParticleFragment.glsl?raw'
 import backgroundParticleVertexShader from './backgroundParticleVertex.glsl?raw'
 
-const PARTICLE_COUNT = 960
 const PARTICLE_SEED = 94721
 const PARTICLE_OPACITY_SCALE = 0.5
 // How far (world units) particles travel upward across the scene's full
@@ -76,18 +75,18 @@ function chooseWeightedCluster(random) {
   return PARTICLE_CLUSTERS[PARTICLE_CLUSTERS.length - 1]
 }
 
-function createParticleAttributes() {
+function createParticleAttributes(particleCount) {
   const random = createSeededRandom(PARTICLE_SEED)
-  const positions = new Float32Array(PARTICLE_COUNT * 3)
-  const sizes = new Float32Array(PARTICLE_COUNT)
-  const opacities = new Float32Array(PARTICLE_COUNT)
-  const colorMixes = new Float32Array(PARTICLE_COUNT)
-  const phases = new Float32Array(PARTICLE_COUNT)
-  const driftSpeeds = new Float32Array(PARTICLE_COUNT)
-  const orbitCenters = new Float32Array(PARTICLE_COUNT * 2)
-  const orbitSpeeds = new Float32Array(PARTICLE_COUNT)
+  const positions = new Float32Array(particleCount * 3)
+  const sizes = new Float32Array(particleCount)
+  const opacities = new Float32Array(particleCount)
+  const colorMixes = new Float32Array(particleCount)
+  const phases = new Float32Array(particleCount)
+  const driftSpeeds = new Float32Array(particleCount)
+  const orbitCenters = new Float32Array(particleCount * 2)
+  const orbitSpeeds = new Float32Array(particleCount)
 
-  for (let particleIndex = 0; particleIndex < PARTICLE_COUNT; particleIndex += 1) {
+  for (let particleIndex = 0; particleIndex < particleCount; particleIndex += 1) {
     const positionIndex = particleIndex * 3
 
     const cluster = chooseWeightedCluster(random)
@@ -151,12 +150,16 @@ function createParticleAttributes() {
 
 export default function DNABackgroundParticles({
   entryFlowRef,
+  particleCount,
   reducedMotion,
   sceneStateRef,
 }) {
   const activeTime = useRef(0)
   const materialReference = useRef()
-  const attributes = useMemo(createParticleAttributes, [])
+  const attributes = useMemo(
+    () => createParticleAttributes(particleCount),
+    [particleCount],
+  )
   const uniforms = useMemo(() => ({
     uDarkTeal: { value: new Color('#07543f') },
     uEmerald: { value: new Color('#19cf82') },
@@ -177,10 +180,9 @@ export default function DNABackgroundParticles({
 
   useFrame(({ gl }, deltaTime) => {
     if (!materialReference.current) return
+    if (!sceneStateRef?.current?.isActive) return
 
     materialReference.current.uniforms.uPixelRatio.value = gl.getPixelRatio()
-
-    if (!sceneStateRef?.current?.isActive) return
 
     const sceneProgress = reducedMotion
       ? Math.min(1, Math.max(0, sceneStateRef.current.progress))
@@ -204,7 +206,7 @@ export default function DNABackgroundParticles({
 
   return (
     <points frustumCulled={false} renderOrder={-1}>
-      <bufferGeometry>
+      <bufferGeometry key={particleCount}>
         <bufferAttribute
           attach="attributes-position"
           args={[attributes.positions, 3]}

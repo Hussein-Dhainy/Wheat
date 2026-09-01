@@ -17,6 +17,7 @@ import { jumpVirtualScrollToPosition } from '../experience/virtualScroll.js'
 import { detectWebGLSupport } from '../experience/webglSupport.js'
 import { useAssetLoadingProgress } from '../hooks/useAssetLoadingProgress.js'
 import { useLandingPointer } from '../hooks/useLandingPointer.js'
+import { useQualityTier } from '../hooks/useQualityTier.js'
 import { useReducedMotion } from '../hooks/useReducedMotion.js'
 import { useVirtualSceneScroll } from '../hooks/useVirtualSceneScroll.js'
 import { SceneOverlays } from '../story/SceneOverlays/SceneOverlays.jsx'
@@ -55,10 +56,13 @@ export function App() {
   const resultInteractionRef = useRef({
     dragging: false,
     pointerStartX: 0,
+    rotationCurrent: 0,
     rotationStart: 0,
     rotationTarget: 0,
+    rotationTransitionId: 0,
   })
   const reducedMotion = useReducedMotion()
+  const { qualityTier, reportPerformanceSample } = useQualityTier()
   const overlayRootRef = useRef()
   const virtualScrollRef = useVirtualSceneScroll({
     enabled: landingEntered
@@ -132,6 +136,7 @@ export function App() {
   return (
     <main
       className={`app-shell ${webglFallback ? 'webgl-fallback-mode' : ''}`}
+      data-quality-tier={qualityTier}
       {...pointerHandlers}
     >
       <div className={`scene-layer ${menuOpen ? 'menu-open' : ''}`}>
@@ -143,7 +148,9 @@ export function App() {
           onWarmupComplete={handleWarmupComplete}
           overlayRootRef={overlayRootRef}
           pointerRef={pointerRef}
+          qualityTier={qualityTier}
           reducedMotion={reducedMotion}
+          reportPerformanceSample={reportPerformanceSample}
           scrollRef={virtualScrollRef}
           selectedGeneticsSeed={selectedGeneticsSeed}
           predictionTestsOpen={predictionTestsOpen}

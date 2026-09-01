@@ -1,5 +1,36 @@
 import { WHEAT_GRAIN_ASSET } from '../../systems/wheatGrain.js'
 
+export const DNA_QUALITY_PROFILES = Object.freeze({
+  high: Object.freeze({
+    backgroundParticleCount: 800,
+    bokehParticleCount: 150,
+    particlesPerFiber: 38,
+    segments: 210,
+    strandCount: 26,
+    trailDensity: 0.82,
+  }),
+  medium: Object.freeze({
+    backgroundParticleCount: 520,
+    bokehParticleCount: 100,
+    particlesPerFiber: 28,
+    segments: 170,
+    strandCount: 20,
+    trailDensity: 0.55,
+  }),
+  low: Object.freeze({
+    backgroundParticleCount: 300,
+    bokehParticleCount: 56,
+    particlesPerFiber: 18,
+    segments: 130,
+    strandCount: 14,
+    trailDensity: 0.3,
+  }),
+})
+
+export function getDNAQualityProfile(quality) {
+  return DNA_QUALITY_PROFILES[quality] ?? DNA_QUALITY_PROFILES.medium
+}
+
 export const DNA_RENDER_CONFIG = {
   transitionTravel: 1.4,
   entry: {
@@ -65,7 +96,6 @@ export const DNA_RENDER_CONFIG = {
   minimumRibbonWidth: 3,
   maximumRibbonOpacity: 0.8,
   minimumRibbonOpacity: 0.02,
-  particlesPerFiber: 48,
   particleFlow: {
     cycles: 1.35,
     // Equivalent fraction of Scene 2's normal particle-scroll motion applied

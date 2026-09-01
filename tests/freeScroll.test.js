@@ -236,6 +236,27 @@ test('menu jumps retain their deliberate semantic settle', () => {
   assert.ok(state.damping < VIRTUAL_SCROLL.damping)
 })
 
+test('menu jumps complete exact scene boundaries without a long transition tail', () => {
+  const state = createStateAt(SCENE_TIMELINE.scenes[0].start)
+  const target = SCENE_TIMELINE.scenes[1].start
+
+  jumpVirtualScrollToPosition(state, target)
+  settle(state, 180)
+
+  assert.equal(state.current, target)
+  assert.equal(state.isSnapping, false)
+  assert.equal(resolveSceneTimeline(state.current, state.timeline).phase, 'section')
+})
+
+test('direct input reaches most of its target within one second', () => {
+  const state = createStateAt(3)
+
+  addVirtualScrollDelta(state, 1)
+  settle(state, 60)
+
+  assert.ok(state.current > 3.98)
+})
+
 test('continuous damping is frame-rate independent', () => {
   const atSixtyFps = createStateAt(3)
   const atThirtyFps = createStateAt(3)
