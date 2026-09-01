@@ -12,6 +12,7 @@ import {
   createFieldAsset,
   createFieldLayouts,
   createNearFieldAsset,
+  shareLODTextures,
 } from '../src/experience/scenes/prediction/fieldAssets.js'
 import {
   createPredictionShadowDescriptors,
@@ -271,4 +272,47 @@ test('field weather shader anchors deformation to plant height', () => {
 
   geometry.dispose()
   material.dispose()
+})
+
+test('near-field materials reuse the far model’s identical maps', () => {
+  const sharedImage = { height: 512, width: 512 }
+  const farTexture = { image: sharedImage, name: 'far' }
+  const nearTexture = { image: sharedImage, name: 'near' }
+  const farAsset = {
+    parts: [{ material: { map: farTexture, normalMap: farTexture } }],
+  }
+  const nearAsset = {
+    parts: [
+      { material: { map: nearTexture, normalMap: nearTexture } },
+      { material: { map: nearTexture, normalMap: nearTexture } },
+    ],
+  }
+
+  shareLODTextures(farAsset, nearAsset)
+
+  nearAsset.parts.forEach((part) => {
+    assert.equal(part.material.map, farTexture)
+    assert.equal(part.material.normalMap, farTexture)
+    assert.equal(part.material.needsUpdate, true)
+  })
+})
+
+test('a near map of a different size is left alone rather than swapped', () => {
+  const farTexture = { image: { height: 512, width: 512 }, name: 'far' }
+  const nearTexture = { image: { height: 2048, width: 2048 }, name: 'near' }
+  const farAsset = { parts: [{ material: { map: farTexture } }] }
+  const nearAsset = { parts: [{ material: { map: nearTexture } }] }
+
+  shareLODTextures(farAsset, nearAsset)
+
+  assert.equal(nearAsset.parts[0].material.map, nearTexture)
+})
+
+test('sharing maps tolerates a material that lacks a given slot', () => {
+  const farTexture = { image: { height: 512, width: 512 }, name: 'far' }
+  const farAsset = { parts: [{ material: { map: farTexture } }] }
+  const nearAsset = { parts: [{ material: {} }] }
+
+  assert.doesNotThrow(() => shareLODTextures(farAsset, nearAsset))
+  assert.equal(nearAsset.parts[0].material.map, undefined)
 })

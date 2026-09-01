@@ -86,10 +86,12 @@ export function PredictionGround({ weatherRef }) {
   })
 
   return (
+    // No receiveShadow here: the renderer never enables a shadow map, and
+    // grounding is faked by PredictionPlantShadows precisely so this scene
+    // does not have to pay for one.
     <mesh
       position={GROUND.position}
       rotation={[-Math.PI / 2, 0, 0]}
-      receiveShadow
     >
       <planeGeometry
         args={[

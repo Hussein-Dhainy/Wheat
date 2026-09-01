@@ -62,6 +62,20 @@ export function ResultScene({
   const connectorGlowMaterialRef = useRef()
   const nodeCoreMaterialRef = useRef()
   const nodeGlowMaterialRef = useRef()
+  // Ref objects are stable for the component's lifetime, so these grouping
+  // arrays can be built once instead of being rebuilt on every frame. The
+  // frame loop reads .current off them as usual.
+  const networkMaterialRefs = useMemo(() => [
+    connectorCoreMaterialRef,
+    connectorGlowMaterialRef,
+    nodeCoreMaterialRef,
+    nodeGlowMaterialRef,
+  ], [])
+  const orbitMaterialRefs = useMemo(() => [
+    orbitRingMaterialRef,
+    orbitMarkerCoreMaterialRef,
+    orbitMarkerGlowMaterialRef,
+  ], [])
   const dustPositions = useMemo(createDustPositions, [])
   const inspectionOrbitData = useMemo(createInspectionOrbitData, [])
   const networkData = useMemo(createNetworkData, [])
@@ -314,13 +328,7 @@ export function ResultScene({
       * visibility
       * networkInspectionVisibility
       * (reducedMotion ? 1 : 0.92 + Math.sin(time * 0.31) * 0.08)
-    const networkMaterials = [
-      connectorCoreMaterialRef.current,
-      connectorGlowMaterialRef.current,
-      nodeCoreMaterialRef.current,
-      nodeGlowMaterialRef.current,
-    ]
-    networkMaterials.forEach((material) => {
+    networkMaterialRefs.forEach(({ current: material }) => {
       material.uniforms.uTime.value = time
       material.uniforms.uPixelRatio.value = viewport.dpr
       material.uniforms.uDriftStrength.value = reducedMotion ? 0 : 1
@@ -367,12 +375,7 @@ export function ResultScene({
     inspectionOrbitRef.current.scale.setScalar(
       mobile ? CONFIG.inspection.orbit.mobileScale : 1,
     )
-    const orbitMaterials = [
-      orbitRingMaterialRef.current,
-      orbitMarkerCoreMaterialRef.current,
-      orbitMarkerGlowMaterialRef.current,
-    ]
-    orbitMaterials.forEach((material) => {
+    orbitMaterialRefs.forEach(({ current: material }) => {
       material.uniforms.uTime.value = time
       material.uniforms.uPixelRatio.value = viewport.dpr
       material.uniforms.uDriftStrength.value = 0

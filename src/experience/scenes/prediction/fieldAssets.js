@@ -86,6 +86,43 @@ export function createFieldLayouts() {
   return FIELD.layers.map(createLayerLayouts)
 }
 
+// The far (LOD1) and near (LOD2) plant models are separate .glb files that
+// embed the same three 512x512 maps, with identical glTF samplers and an
+// identical material definition. Loading them separately therefore produces
+// two independent sets of Texture objects holding identical pixels, and each
+// set costs its own GPU upload.
+//
+// Repointing the near materials at the far textures collapses that to one
+// upload. The near model's own textures are deliberately NOT disposed:
+// useLoader caches the parsed glb, so a remount would hand back a scene whose
+// textures we had destroyed. Left alone they simply stay in CPU memory and
+// never reach the GPU, because three only uploads a texture when a rendered
+// material actually references it.
+const SHARED_LOD_MAP_SLOTS = ['map', 'metalnessMap', 'normalMap', 'roughnessMap']
+
+function canShareTexture(farTexture, nearTexture) {
+  if (!farTexture || !nearTexture || farTexture === nearTexture) return false
+
+  // Guard against a future re-export giving the two LODs genuinely different
+  // maps: matching dimensions is what makes the swap safe to do blindly.
+  return farTexture.image?.width === nearTexture.image?.width
+    && farTexture.image?.height === nearTexture.image?.height
+}
+
+export function shareLODTextures(farAsset, nearAsset) {
+  const farMaterial = farAsset.parts[0]?.material
+  if (!farMaterial) return
+
+  nearAsset.parts.forEach((part) => {
+    SHARED_LOD_MAP_SLOTS.forEach((slot) => {
+      if (canShareTexture(farMaterial[slot], part.material[slot])) {
+        part.material[slot] = farMaterial[slot]
+        part.material.needsUpdate = true
+      }
+    })
+  })
+}
+
 function createFieldMaterial(sourceMaterial) {
   const material = sourceMaterial.clone()
   material.color.multiply(new Color(FIELD.tint))

@@ -109,7 +109,15 @@ export const PREDICTION_RENDER_CONFIG = {
     position: [0, -0.34, -65],
     repeat: [54, 88],
     roughnessMapUrl: '/models/prediction/ground/Ground048_1K-JPG_Roughness.jpg',
-    segments: [160, 256],
+    // The displacement map tiles 54x88 times across this plane, so resolving
+    // it would need well over 108 segments across just to sample each tile
+    // twice. Even the previous 160x256 grid (82k triangles, the largest mesh
+    // in the experience) sat below that threshold, which meant its vertices
+    // were sampling the map far too sparsely to reproduce it -- they added
+    // aliasing, not relief. The visible surface detail comes from the normal
+    // map instead, so this grid only needs enough density to stay smooth
+    // across the plane's own curvature-free span.
+    segments: [32, 48],
     size: [140, 220],
     tint: '#9a806d',
   },

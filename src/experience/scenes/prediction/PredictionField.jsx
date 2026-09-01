@@ -4,6 +4,7 @@ import { FieldInstances } from './FieldInstances.jsx'
 import {
   createFieldAsset,
   createNearFieldAsset,
+  shareLODTextures,
 } from './fieldAssets.js'
 import { PREDICTION_RENDER_CONFIG as CONFIG } from './predictionConfig.js'
 
@@ -16,10 +17,14 @@ export function PredictionField({
   reducedMotion,
   weatherRef,
 }) {
-  const assets = useMemo(() => ({
-    far: createFieldAsset(farSourceScene),
-    near: createNearFieldAsset(nearSourceScene),
-  }), [farSourceScene, nearSourceScene])
+  const assets = useMemo(() => {
+    const far = createFieldAsset(farSourceScene)
+    const near = createNearFieldAsset(nearSourceScene)
+    // Runs before the first render, so the near model's duplicate copies of
+    // these maps are dropped from every rendered material and never upload.
+    shareLODTextures(far, near)
+    return { far, near }
+  }, [farSourceScene, nearSourceScene])
 
   useFrame(() => {
     const weather = weatherRef?.current
