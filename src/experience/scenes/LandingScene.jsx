@@ -2,12 +2,14 @@ import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { Box3, Color, MathUtils, Vector3 } from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { configureGLTFLoader } from '../systems/gltfAssetLoader.js'
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js'
 import { advanceActiveSceneTime } from '../activeSceneTime.js'
 import { LandingCameraRig } from '../camera/LandingCameraRig.jsx'
 import { BackgroundParticles } from '../systems/BackgroundParticles.jsx'
+import { assetUrl } from '../../config/assetBase.js'
 
-const WHEAT_MODEL_URL = '/models/wheat.glb'
+const WHEAT_MODEL_URL = assetUrl('wheat.glb')
 const WHEAT_MODEL_HEIGHT = 8.4
 
 // Edit these values to tune the wheat texture's color response.
@@ -85,8 +87,12 @@ function LandingLights() {
 function WheatPlant({ reducedMotion, sceneStateRef }) {
   const activeTime = useRef(0)
   const wheat = useRef()
-  const { size } = useThree()
-  const { scene } = useLoader(GLTFLoader, WHEAT_MODEL_URL)
+  const { gl, size } = useThree()
+  const { scene } = useLoader(
+    GLTFLoader,
+    WHEAT_MODEL_URL,
+    configureGLTFLoader(gl),
+  )
   const { model, ownedMaterials } = useMemo(() => {
     const clonedModel = cloneSkeleton(scene)
     const materialClones = new Map()
@@ -240,4 +246,8 @@ export function LandingScene({
   )
 }
 
-useLoader.preload(GLTFLoader, WHEAT_MODEL_URL)
+// Intentionally not a useLoader.preload: KTX2 transcoding has to be told which
+// compressed format the renderer supports, and no renderer exists at module
+// evaluation time. Every scene mounts immediately behind the preloader overlay,
+// so the in-component useLoader begins the same fetch within a frame of where a
+// module-level preload would have.

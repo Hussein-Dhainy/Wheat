@@ -1,4 +1,5 @@
 import { WHEAT_GRAIN_ASSET } from '../../systems/wheatGrain.js'
+import { assetUrl } from '../../../config/assetBase.js'
 
 export const DNA_QUALITY_PROFILES = Object.freeze({
   high: Object.freeze({
@@ -155,7 +156,7 @@ export const DNA_RENDER_CONFIG = {
   },
   seeds: {
     count: 18,
-    modelUrl: '/models/genetics/EditedWheatSeeds.glb',
+    modelUrl: assetUrl('genetics/EditedWheatSeeds.glb'),
     sizeRange: [0.56, 0.86],
     horizontalRange: 2.65,
     depthRange: [-1.25, 1.35],

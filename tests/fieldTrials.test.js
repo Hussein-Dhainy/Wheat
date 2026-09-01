@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { SCENE_TIMELINE } from '../src/config/sceneTimeline.js'
 import { FIELD_TRIALS_CONFIG } from '../src/experience/scenes/field/fieldTrialsConfig.js'
 import { createFieldTintData } from '../src/experience/scenes/field/fieldTintLayout.js'
+import { assetUrl } from '../src/config/assetBase.js'
 
 test('Scene 4 provides one virtual unit of continuous field travel', () => {
   const fieldScene = SCENE_TIMELINE.scenes.find((scene) => scene.id === 'field')
@@ -36,7 +37,7 @@ test('field tint assignment is deterministic and individually overridable', () =
 test('the field uses enough geometry overscan to hide the plane boundary', () => {
   assert.equal(
     FIELD_TRIALS_CONFIG.textureUrl,
-    '/models/field/VariedWheatField.png',
+    assetUrl('field/VariedWheatField.png'),
   )
   assert.ok(FIELD_TRIALS_CONFIG.planeSize >= 40)
   assert.ok(FIELD_TRIALS_CONFIG.gridSize[0] >= 16)

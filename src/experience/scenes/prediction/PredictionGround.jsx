@@ -13,14 +13,12 @@ import { PREDICTION_RENDER_CONFIG as CONFIG } from './predictionConfig.js'
 const GROUND = CONFIG.ground
 const GROUND_TEXTURE_URLS = [
   GROUND.colorMapUrl,
-  GROUND.roughnessMapUrl,
   GROUND.normalMapUrl,
-  GROUND.displacementMapUrl,
 ]
 
 export function PredictionGround({ weatherRef }) {
   const { gl } = useThree()
-  const [colorMap, roughnessMap, normalMap, displacementMap] = useLoader(
+  const [colorMap, normalMap] = useLoader(
     TextureLoader,
     GROUND_TEXTURE_URLS,
   )
@@ -40,13 +38,7 @@ export function PredictionGround({ weatherRef }) {
   useEffect(() => {
     const maximumAnisotropy = Math.min(8, gl.capabilities.getMaxAnisotropy())
 
-    GROUND_TEXTURE_URLS.forEach((_, index) => {
-      const texture = [
-        colorMap,
-        roughnessMap,
-        normalMap,
-        displacementMap,
-      ][index]
+    [colorMap, normalMap].forEach((texture) => {
       texture.wrapS = RepeatWrapping
       texture.wrapT = RepeatWrapping
       texture.repeat.set(...GROUND.repeat)
@@ -54,7 +46,7 @@ export function PredictionGround({ weatherRef }) {
       texture.needsUpdate = true
     })
     colorMap.colorSpace = SRGBColorSpace
-  }, [colorMap, displacementMap, gl, normalMap, roughnessMap])
+  }, [colorMap, gl, normalMap])
 
   useFrame(() => {
     const weather = weatherRef?.current
@@ -104,15 +96,11 @@ export function PredictionGround({ weatherRef }) {
       <meshStandardMaterial
         ref={materialRef}
         color={GROUND.tint}
-        displacementBias={GROUND.displacementBias}
-        displacementMap={displacementMap}
-        displacementScale={GROUND.displacementScale}
         map={colorMap}
         metalness={0}
         normalMap={normalMap}
         normalScale={normalScale}
         roughness={1}
-        roughnessMap={roughnessMap}
       />
     </mesh>
   )

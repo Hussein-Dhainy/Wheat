@@ -10,6 +10,7 @@ import {
   smootherRange,
 } from '../src/experience/scenes/result/resultGeometry.js'
 import { prepareGrainMaterial } from '../src/experience/systems/wheatGrain.js'
+import { assetUrl } from '../src/config/assetBase.js'
 import {
   getNearestResultViewRotation,
   getResultOrbitMarkerAngle,
@@ -43,7 +44,7 @@ test('closing controls have unique labels and remain content-driven', () => {
 test('the result uses the optimized wheat seed model', () => {
   assert.equal(
     RESULT_SCENE_CONFIG.modelUrl,
-    '/models/result/ResultSeedOptimized.glb',
+    assetUrl('result/ResultSeedOptimized.glb'),
   )
   assert.equal(RESULT_SCENE_CONFIG.meshName, 'node_0')
   assert.equal(RESULT_SCENE_CONFIG.materialSourceMeshName, 'node_0')

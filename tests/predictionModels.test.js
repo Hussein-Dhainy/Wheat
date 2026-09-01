@@ -28,20 +28,21 @@ import {
 } from '../src/experience/scenes/prediction/fieldWeatherMaterial.js'
 import { PREDICTION_RENDER_CONFIG } from '../src/experience/scenes/prediction/predictionConfig.js'
 import { updateDroughtMorphInfluences } from '../src/experience/scenes/prediction/plantConditionMotion.js'
+import { assetUrl } from '../src/config/assetBase.js'
 
 const CONFIG = PREDICTION_RENDER_CONFIG
 
 test('prediction uses dedicated hero and field model contracts', () => {
-  assert.equal(CONFIG.models.hero.url, '/models/prediction/PredictionWheat.glb')
+  assert.equal(CONFIG.models.hero.url, assetUrl('prediction/PredictionWheat.glb'))
   assert.equal(CONFIG.models.hero.rootName, 'PredictionWheat')
   assert.equal(
     CONFIG.models.fieldFar.url,
-    '/models/prediction/PredictionWheat_LOD1.glb',
+    assetUrl('prediction/PredictionWheat_LOD1.glb'),
   )
   assert.equal(CONFIG.models.fieldFar.meshName, 'PredictionWheat_LOD1')
   assert.equal(
     CONFIG.models.fieldNear.url,
-    '/models/prediction/PredictionWheat_LOD2.glb',
+    assetUrl('prediction/PredictionWheat_LOD2.glb'),
   )
   assert.equal(CONFIG.models.fieldNear.rootName, 'PredictionWheat')
 })

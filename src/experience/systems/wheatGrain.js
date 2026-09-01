@@ -1,4 +1,5 @@
 import { Color, DoubleSide, Vector2, Vector3 } from 'three'
+import { assetUrl } from '../../config/assetBase.js'
 
 // Scene 2's genetics detail and Scene 5's result both present the same wheat
 // grain. This module owns that shared contract — the model, its mesh names,
@@ -9,7 +10,7 @@ import { Color, DoubleSide, Vector2, Vector3 } from 'three'
 // tests) can read the contract without pulling in the renderer. The loading
 // side lives in useWheatGrainAssets.js.
 export const WHEAT_GRAIN_ASSET = {
-  modelUrl: '/models/result/ResultSeedOptimized.glb',
+  modelUrl: assetUrl('result/ResultSeedOptimized.glb'),
   meshName: 'node_0',
   materialSourceMeshName: 'node_0',
   // The rest pose both scenes rotate away from. Scene 5 uses it directly;

@@ -11,6 +11,7 @@ import {
   Vector3,
 } from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { configureGLTFLoader } from '../../systems/gltfAssetLoader.js'
 import {
   DEFAULT_GENETICS_SEED_ID,
   GENETICS_SEED_OPTIONS,
@@ -155,7 +156,7 @@ export default function DNAFallingSeeds({
   const carouselRotation = useRef(0)
   const carouselSeedIsHovered = useRef(false)
   const { gl } = useThree()
-  const { scene } = useLoader(GLTFLoader, CONFIG.modelUrl)
+  const { scene } = useLoader(GLTFLoader, CONFIG.modelUrl, configureGLTFLoader(gl))
   const tracks = useMemo(createTracks, [])
   const scratchObject = useMemo(() => new Object3D(), [])
   const carouselRingHaloPositions = useMemo(
@@ -416,4 +417,8 @@ export default function DNAFallingSeeds({
   )
 }
 
-useLoader.preload(GLTFLoader, CONFIG.modelUrl)
+// Intentionally not a useLoader.preload: KTX2 transcoding has to be told which
+// compressed format the renderer supports, and no renderer exists at module
+// evaluation time. Every scene mounts immediately behind the preloader overlay,
+// so the in-component useLoader begins the same fetch within a frame of where a
+// module-level preload would have.

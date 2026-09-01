@@ -1,16 +1,17 @@
+import { assetUrl } from '../../../config/assetBase.js'
 export const PREDICTION_RENDER_CONFIG = {
   models: {
     hero: {
       rootName: 'PredictionWheat',
-      url: '/models/prediction/PredictionWheat.glb',
+      url: assetUrl('prediction/PredictionWheat.glb'),
     },
     fieldFar: {
       meshName: 'PredictionWheat_LOD1',
-      url: '/models/prediction/PredictionWheat_LOD1.glb',
+      url: assetUrl('prediction/PredictionWheat_LOD1.glb'),
     },
     fieldNear: {
       rootName: 'PredictionWheat',
-      url: '/models/prediction/PredictionWheat_LOD2.glb',
+      url: assetUrl('prediction/PredictionWheat_LOD2.glb'),
     },
   },
   // At this scale the opening frame contains the complete wheat head, while
@@ -98,26 +99,36 @@ export const PREDICTION_RENDER_CONFIG = {
     },
   },
   ground: {
-    colorMapUrl: '/models/prediction/ground/Ground048_1K-JPG_Color.jpg',
-    displacementBias: -0.02,
-    displacementMapUrl: '/models/prediction/ground/Ground048_1K-JPG_Displacement.jpg',
-    displacementScale: 0.04,
-    normalMapUrl: '/models/prediction/ground/Ground048_1K-JPG_NormalGL.jpg',
+    // This plane is a backdrop: it sits behind the field inside the blurred
+    // backdrop pass and reads as a soft soil tone rather than as a surface
+    // anyone inspects. It is costed accordingly.
+    //
+    // No displacement map. It used to tile 54x88 times across the plane, so
+    // resolving it would have needed well over 108 segments across just to
+    // sample each tile twice -- the old 160x256 grid (81,920 triangles, the
+    // largest mesh in the experience) was already far below that, so its
+    // vertices produced aliasing rather than relief. Removing it costs
+    // nothing visible and saves a 628KB download plus its vertex-stage
+    // texture fetch. The old displacementBias of -0.02 cancelled the mean of
+    // a 0.04 displacement, so the mean surface height is unchanged at -0.34
+    // and the faked plant shadows at -0.295 keep their separation.
+    //
+    // No roughness map either. Matte soil at this distance barely registers
+    // the specular modulation, and the weather loop already drives a scalar
+    // roughness directly -- which the map was only diluting.
+    //
+    // Two textures remain: colour, and the normal map that lets the moving
+    // key and rim lights pick out soil relief. Geometry is a flat quad;
+    // lighting is per-fragment and there is no fog in this scene, so extra
+    // vertices bought nothing.
+    colorMapUrl: assetUrl('prediction/ground/Ground048_1K-JPG_Color.jpg'),
+    normalMapUrl: assetUrl('prediction/ground/Ground048_1K-JPG_NormalGL.jpg'),
     normalScale: 0.72,
     // Extend past the portal camera's far clip so no finite rear edge can
     // project onto the visible horizon.
     position: [0, -0.34, -65],
     repeat: [54, 88],
-    roughnessMapUrl: '/models/prediction/ground/Ground048_1K-JPG_Roughness.jpg',
-    // The displacement map tiles 54x88 times across this plane, so resolving
-    // it would need well over 108 segments across just to sample each tile
-    // twice. Even the previous 160x256 grid (82k triangles, the largest mesh
-    // in the experience) sat below that threshold, which meant its vertices
-    // were sampling the map far too sparsely to reproduce it -- they added
-    // aliasing, not relief. The visible surface detail comes from the normal
-    // map instead, so this grid only needs enough density to stay smooth
-    // across the plane's own curvature-free span.
-    segments: [32, 48],
+    segments: [1, 1],
     size: [140, 220],
     tint: '#9a806d',
   },

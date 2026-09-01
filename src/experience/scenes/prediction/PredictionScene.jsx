@@ -1,7 +1,8 @@
-import { useFrame, useLoader } from '@react-three/fiber'
+import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import { Color, Euler, MathUtils, Quaternion } from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { configureGLTFLoader } from '../../systems/gltfAssetLoader.js'
 import { PredictionBackdrop } from './PredictionBackdrop.jsx'
 import { PredictionField } from './PredictionField.jsx'
 import { PredictionGround } from './PredictionGround.jsx'
@@ -93,17 +94,22 @@ export function PredictionScene({
   sceneStateRef,
   selectedPredictionCondition,
 }) {
+  const { gl } = useThree()
+  const configureLoader = configureGLTFLoader(gl)
   const { scene: heroSourceScene } = useLoader(
     GLTFLoader,
     CONFIG.models.hero.url,
+    configureLoader,
   )
   const { scene: farFieldSourceScene } = useLoader(
     GLTFLoader,
     CONFIG.models.fieldFar.url,
+    configureLoader,
   )
   const { scene: nearFieldSourceScene } = useLoader(
     GLTFLoader,
     CONFIG.models.fieldNear.url,
+    configureLoader,
   )
   const heroPlant = useMemo(
     () => prepareHeroPlant(heroSourceScene),
@@ -684,6 +690,8 @@ export function PredictionScene({
   )
 }
 
-useLoader.preload(GLTFLoader, CONFIG.models.hero.url)
-useLoader.preload(GLTFLoader, CONFIG.models.fieldFar.url)
-useLoader.preload(GLTFLoader, CONFIG.models.fieldNear.url)
+// Intentionally not a useLoader.preload: KTX2 transcoding has to be told which
+// compressed format the renderer supports, and no renderer exists at module
+// evaluation time. Every scene mounts immediately behind the preloader overlay,
+// so the in-component useLoader begins the same fetch within a frame of where a
+// module-level preload would have.
