@@ -37,8 +37,12 @@ export function PredictionGround({ weatherRef }) {
 
   useEffect(() => {
     const maximumAnisotropy = Math.min(8, gl.capabilities.getMaxAnisotropy())
+    // Named rather than written inline: this file omits semicolons, so an
+    // array literal opening a statement would be parsed as an index into the
+    // expression on the line above.
+    const textures = [colorMap, normalMap]
 
-    [colorMap, normalMap].forEach((texture) => {
+    textures.forEach((texture) => {
       texture.wrapS = RepeatWrapping
       texture.wrapT = RepeatWrapping
       texture.repeat.set(...GROUND.repeat)
