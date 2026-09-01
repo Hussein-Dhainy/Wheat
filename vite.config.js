@@ -10,4 +10,22 @@ export default defineConfig({
     chunkSizeWarningLimit: 1600,
   },
   plugins: [react()],
+  server: {
+    watch: {
+      // Headless timing/screenshot runs drop a Chrome user-data directory in
+      // the project root. Chrome keeps files inside it locked while it runs,
+      // and the dev server's watcher dies with EBUSY the moment it tries to
+      // watch one -- taking the whole process down, not just the watch.
+      // Gitignoring it is not enough; the watcher does not consult git.
+      //
+      // The defaults are restated because this list replaces them rather than
+      // extending them.
+      ignored: [
+        '**/.git/**',
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/.tmp-chrome-*/**',
+      ],
+    },
+  },
 })
