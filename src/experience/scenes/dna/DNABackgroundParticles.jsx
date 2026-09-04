@@ -3,6 +3,7 @@ import { useMemo, useRef } from 'react'
 import { AdditiveBlending, Color, Vector2 } from 'three'
 import { advanceActiveSceneTime } from '../../activeSceneTime.js'
 import { DNA_RENDER_CONFIG } from './dnaConfig.js'
+import { getGeneticsAmbientParticleOpacity } from '../../../config/geneticsSeeds.js'
 import backgroundParticleFragmentShader from './backgroundParticleFragment.glsl?raw'
 import backgroundParticleVertexShader from './backgroundParticleVertex.glsl?raw'
 
@@ -165,6 +166,7 @@ export default function DNABackgroundParticles({
     uEmerald: { value: new Color('#19cf82') },
     uPink: { value: new Color('#ef315f') },
     uPixelRatio: { value: 1 },
+    uSceneOpacity: { value: 1 },
     uScrollProgress: { value: 0 },
     uScrollAxisTravel: {
       value: new Vector2(...DNA_RENDER_CONFIG.particleFlow.backgroundAxisTravel),
@@ -192,6 +194,9 @@ export default function DNABackgroundParticles({
       * DNA_RENDER_CONFIG.particleFlow.entryProgress
     materialReference.current.uniforms.uScrollProgress.value = (
       sceneProgress + entryFlowProgress
+    )
+    materialReference.current.uniforms.uSceneOpacity.value = (
+      getGeneticsAmbientParticleOpacity(sceneStateRef.current.progress ?? 0)
     )
 
     activeTime.current = advanceActiveSceneTime(

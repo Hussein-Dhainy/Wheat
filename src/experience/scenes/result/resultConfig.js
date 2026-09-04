@@ -38,6 +38,17 @@ export const RESULT_SCENE_CONFIG = {
     // one continuous move instead of a sudden zoom after the button vanishes.
     transitionDamping: 1.4,
     grainZoom: 1.08,
+    focusDamping: 3.2,
+    desktopFocusOffset: [-0.18, 0.05, 0.58],
+    mobileFocusOffset: [-0.08, 0.12, 0.48],
+    // Each inspection angle gets a tiny compositional bias so selecting a
+    // result feels like focusing on a different face, not spinning an object
+    // that remains mechanically pinned in place.
+    viewFocusOffsets: [
+      [0, 0],
+      [0.03, 0.05],
+      [-0.03, -0.04],
+    ],
     particleZoom: 3.15,
     particleCameraTravel: 3.25,
     particleFadeRange: [0.32, 0.9],

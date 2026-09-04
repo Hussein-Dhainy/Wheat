@@ -12,14 +12,12 @@ export function SceneOverlays({
   predictionTestsOpen,
   resultInspectionOpen,
   resultInteractionRef,
-  selectedGeneticsSeed,
   selectedPredictionCondition,
   selectedResultClosingAction,
   selectedResultView,
   setPredictionTestsOpen,
   setGeneticsDetailOpen,
   setResultInspectionOpen,
-  setSelectedGeneticsSeed,
   setSelectedPredictionCondition,
   setSelectedResultClosingAction,
   setSelectedResultView,
@@ -42,7 +40,7 @@ export function SceneOverlays({
             data-scene-id={entry.id}
             data-scene-index={index}
             data-scene-layer
-            data-seed-carousel-active="false"
+            data-seedling-growth-active="false"
             aria-hidden={fallback ? false : index !== 0}
             style={{
               background: fallback && index > 0
@@ -77,14 +75,12 @@ export function SceneOverlays({
                   predictionTestsOpen={predictionTestsOpen}
                   resultInspectionOpen={resultInspectionOpen}
                   resultInteractionRef={resultInteractionRef}
-                  selectedGeneticsSeed={selectedGeneticsSeed}
                   selectedPredictionCondition={selectedPredictionCondition}
                   selectedResultClosingAction={selectedResultClosingAction}
                   selectedResultView={selectedResultView}
                   setPredictionTestsOpen={setPredictionTestsOpen}
                   setGeneticsDetailOpen={setGeneticsDetailOpen}
                   setResultInspectionOpen={setResultInspectionOpen}
-                  setSelectedGeneticsSeed={setSelectedGeneticsSeed}
                   setSelectedPredictionCondition={setSelectedPredictionCondition}
                   setSelectedResultClosingAction={setSelectedResultClosingAction}
                   setSelectedResultView={setSelectedResultView}

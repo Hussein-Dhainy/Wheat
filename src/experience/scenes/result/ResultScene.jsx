@@ -33,6 +33,7 @@ export function ResultScene({
   resultInspectionOpen,
   resultInteractionRef,
   sceneStateRef,
+  selectedResultView,
 }) {
   const { camera, size, viewport } = useThree()
   const assets = useWheatGrainAssets()
@@ -43,6 +44,7 @@ export function ResultScene({
   const grainGroupRef = useRef()
   const grainRef = useRef()
   const grainInspectionRotation = useRef(0)
+  const grainInspectionOffset = useRef({ x: 0, y: 0, z: 0 })
   const grainRotationTransition = useRef({
     active: false,
     elapsed: 0,
@@ -206,6 +208,43 @@ export function ResultScene({
     const scale = mobile
       ? CONFIG.grain.mobileScale
       : CONFIG.grain.desktopScale
+    const focusOffset = mobile
+      ? CONFIG.inspection.mobileFocusOffset
+      : CONFIG.inspection.desktopFocusOffset
+    const viewFocusOffset = CONFIG.inspection.viewFocusOffsets[selectedResultView]
+      ?? CONFIG.inspection.viewFocusOffsets[0]
+    const targetFocusX = resultInspectionOpen
+      ? focusOffset[0] + viewFocusOffset[0]
+      : 0
+    const targetFocusY = resultInspectionOpen
+      ? focusOffset[1] + viewFocusOffset[1]
+      : 0
+    const targetFocusZ = resultInspectionOpen ? focusOffset[2] : 0
+
+    if (reducedMotion) {
+      grainInspectionOffset.current.x = targetFocusX
+      grainInspectionOffset.current.y = targetFocusY
+      grainInspectionOffset.current.z = targetFocusZ
+    } else {
+      grainInspectionOffset.current.x = MathUtils.damp(
+        grainInspectionOffset.current.x,
+        targetFocusX,
+        CONFIG.inspection.focusDamping,
+        delta,
+      )
+      grainInspectionOffset.current.y = MathUtils.damp(
+        grainInspectionOffset.current.y,
+        targetFocusY,
+        CONFIG.inspection.focusDamping,
+        delta,
+      )
+      grainInspectionOffset.current.z = MathUtils.damp(
+        grainInspectionOffset.current.z,
+        targetFocusZ,
+        CONFIG.inspection.focusDamping,
+        delta,
+      )
+    }
 
     activeTime.current = advanceActiveSceneTime(
       activeTime.current,
@@ -220,9 +259,9 @@ export function ResultScene({
     )
 
     grainGroupRef.current.position.set(
-      position[0],
-      position[1] + travelOffset,
-      position[2],
+      position[0] + grainInspectionOffset.current.x,
+      position[1] + travelOffset + grainInspectionOffset.current.y,
+      position[2] + grainInspectionOffset.current.z,
     )
     grainGroupRef.current.scale.setScalar(
       scale * MathUtils.lerp(1, CONFIG.inspection.grainZoom, inspectionMix),

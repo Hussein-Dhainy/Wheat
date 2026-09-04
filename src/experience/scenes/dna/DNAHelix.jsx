@@ -18,7 +18,7 @@ import dnaParticleVertexShader from './dnaParticleVertex.glsl?raw'
 import dnaVertexShader from './dnaVertex.glsl?raw'
 import DNABackgroundParticles from './DNABackgroundParticles.jsx'
 import DNABokehParticles from './DNABokehParticles.jsx'
-import DNAFallingSeeds from './DNAFallingSeeds.jsx'
+import DNASeedlingGrowth from './DNASeedlingGrowth.jsx'
 import DNAGeneticsDetail from './DNAGeneticsDetail.jsx'
 import DNAHaze from './DNAHaze.jsx'
 import DNAHelixNodes from './DNAHelixNodes.jsx'
@@ -62,12 +62,10 @@ function applyBackgroundPalette(target, stops, progress) {
 export default function DNAHelix({
   background = '#160904',
   geneticsDetailOpen,
-  onSelectGeneticsSeed,
   pointerRef,
   quality,
   reducedMotion,
   sceneStateRef,
-  selectedGeneticsSeed,
 }) {
   const qualityProfile = getDNAQualityProfile(quality)
   const dnaReference = useRef()
@@ -429,11 +427,9 @@ export default function DNAHelix({
         sceneStateRef={sceneStateRef}
       />
       <Suspense fallback={null}>
-        <DNAFallingSeeds
-          onSelectSeed={onSelectGeneticsSeed}
+        <DNASeedlingGrowth
           reducedMotion={reducedMotion}
           sceneStateRef={sceneStateRef}
-          selectedSeedId={selectedGeneticsSeed}
         />
         <DNAGeneticsDetail
           geneticsDetailOpen={geneticsDetailOpen}

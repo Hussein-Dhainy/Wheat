@@ -3,6 +3,7 @@ import { useMemo, useRef } from 'react'
 import { AdditiveBlending, Color, Vector2 } from 'three'
 import { advanceActiveSceneTime } from '../../activeSceneTime.js'
 import { DNA_RENDER_CONFIG } from './dnaConfig.js'
+import { getGeneticsAmbientParticleOpacity } from '../../../config/geneticsSeeds.js'
 import bokehParticleFragmentShader from './bokehParticleFragment.glsl?raw'
 import bokehParticleVertexShader from './bokehParticleVertex.glsl?raw'
 
@@ -148,6 +149,7 @@ export default function DNABokehParticles({
     uDeepTeal: { value: new Color('#063d32') },
     uForestGreen: { value: new Color('#0b6847') },
     uPixelRatio: { value: 1 },
+    uSceneOpacity: { value: 1 },
     uScrollProgress: { value: 0 },
     uScrollAxisTravel: {
       value: new Vector2(...DNA_RENDER_CONFIG.particleFlow.bokehAxisTravel),
@@ -175,6 +177,9 @@ export default function DNABokehParticles({
       * DNA_RENDER_CONFIG.particleFlow.entryProgress
     materialReference.current.uniforms.uScrollProgress.value = (
       sceneProgress + entryFlowProgress
+    )
+    materialReference.current.uniforms.uSceneOpacity.value = (
+      getGeneticsAmbientParticleOpacity(sceneStateRef.current.progress ?? 0)
     )
 
     activeTime.current = advanceActiveSceneTime(

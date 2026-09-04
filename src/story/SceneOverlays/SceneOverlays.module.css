@@ -2229,94 +2229,72 @@
   }
 }
 
-.seedSelector {
-  position: relative;
-  display: grid;
-  align-self: center;
-  justify-self: end;
-  width: min(31rem, 42vw);
-  gap: clamp(1.5rem, 3vw, 2.75rem);
-  opacity: var(--seed-carousel-progress, 0);
+.seedlingStory {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
   pointer-events: none;
-  transform: translateY(var(--seed-carousel-offset, 1.5rem));
-  transition: visibility 0s linear 160ms;
+  transition:
+    opacity var(--seedling-title-fade-duration, 520ms) ease-out,
+    visibility 0s linear var(--seedling-title-fade-duration, 520ms);
   visibility: hidden;
 }
 
-.layer[data-seed-carousel-active='true'] .seedSelector,
-.fallback .seedSelector {
-  pointer-events: auto;
-  transition-delay: 0s;
+.layer[data-seedling-growth-active='true'] .seedlingStory,
+.fallback .seedlingStory {
+  opacity: 1;
+  transition:
+    opacity var(--seedling-title-fade-duration, 520ms) ease-out,
+    visibility 0s linear 0s;
   visibility: visible;
 }
 
-.fallback .seedSelector {
+.fallback .seedlingStory {
+  position: relative;
+  min-height: 70svh;
+}
+
+.seedlingStoryCopy {
+  position: absolute;
+  top: 50%;
+  left: clamp(1.75rem, 7.8vw, 9.5rem);
+  width: min(45rem, 46vw);
+  transform: translateY(-50%);
+}
+
+.seedlingStoryTitle {
+  display: block;
+  width: min(42rem, 43vw);
+  pointer-events: auto;
+}
+
+.seedlingStoryBody {
+  max-width: 36rem;
+  margin: clamp(1.25rem, 2vw, 1.8rem) 0 0;
+  color: rgb(255 255 255 / 76%);
+  font-size: clamp(1.02rem, 1.28vw, 1.18rem);
+  line-height: 1.65;
+}
+
+.seedlingStoryBody span {
+  display: block;
   opacity: 1;
-  transform: none;
+  transform: translateX(0);
 }
 
-.seedCopy .eyebrow {
-  margin-bottom: 0.8rem;
+.seedlingStory[data-intro-state='waiting'] .geneticsEyebrow,
+.seedlingStory[data-intro-state='waiting'] .seedlingStoryBody span {
+  clip-path: inset(0 100% 0 0);
+  opacity: 0;
+  transform: translateX(-0.75rem);
 }
 
-.seedCopy h3 {
-  max-width: 9ch;
-  margin: 0;
-  font-size: clamp(2.7rem, 5vw, 5.5rem);
-  font-weight: 500;
-  letter-spacing: -0.055em;
-  line-height: 0.9;
-  text-wrap: balance;
+.seedlingStory:not([data-intro-state='waiting']) .geneticsEyebrow {
+  animation: prediction-subtitle-reveal 700ms cubic-bezier(0.22, 0.72, 0.2, 1) 1350ms both;
 }
 
-.seedCopy > p:last-child {
-  max-width: 27rem;
-  margin: 1.3rem 0 0;
-  color: rgb(245 241 231 / 68%);
-  font-size: clamp(0.92rem, 1.2vw, 1.08rem);
-  line-height: 1.6;
-}
-
-.seedOptions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-}
-
-.seedOptions button {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.75rem;
-  padding: 0.65rem 0.9rem;
-  color: rgb(245 241 231 / 62%);
-  font: inherit;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  background: rgb(255 255 255 / 3%);
-  border: 1px solid rgb(245 241 231 / 20%);
-  border-radius: 999px;
-  cursor: pointer;
-  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease;
-}
-
-.seedOptions button span {
-  margin-right: 0.55rem;
-  color: var(--scene-accent);
-  font-variant-numeric: tabular-nums;
-}
-
-.seedOptions button:hover,
-.seedOptions button[aria-pressed='true'] {
-  color: #fff8e9;
-  background: rgb(200 221 108 / 12%);
-  border-color: rgb(200 221 108 / 68%);
-}
-
-.seedOptions button:focus-visible {
-  outline: 2px solid #fff8e9;
-  outline-offset: 3px;
+.seedlingStory:not([data-intro-state='waiting']) .seedlingStoryBody span {
+  animation: prediction-subtitle-reveal 800ms cubic-bezier(0.22, 0.72, 0.2, 1) 1450ms both;
 }
 
 .eyebrow {
@@ -2558,31 +2536,25 @@
     transform: scale(1.065);
   }
 
-  .seedSelector {
-    align-self: end;
-    justify-self: stretch;
-    width: 100%;
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
-    gap: 1.15rem;
+  .seedlingStory {
+    inset: 0;
   }
 
-  .seedCopy h3 {
-    font-size: clamp(2.5rem, 12vw, 4rem);
+  .seedlingStoryCopy {
+    top: 15vh;
+    left: 1.5rem;
+    width: min(31rem, calc(100vw - 3rem));
+    transform: none;
   }
 
-  .seedCopy > p:last-child {
-    max-width: 24rem;
-    margin-top: 0.8rem;
+  .seedlingStoryTitle {
+    width: min(34rem, calc(100vw - 3rem));
   }
 
-  .seedOptions {
-    gap: 0.45rem;
-  }
-
-  .seedOptions button {
-    min-height: 2.6rem;
-    padding: 0.55rem 0.7rem;
-    font-size: 0.61rem;
+  .seedlingStoryBody {
+    max-width: 25rem;
+    margin-top: 1rem;
+    font-size: 0.98rem;
   }
 
   .predictionCopy {
@@ -2667,6 +2639,7 @@
   .geneticsEyebrow,
   .geneticsIntroBody span,
   .geneticsBridgeBody span,
+  .seedlingStoryBody span,
   .geneticsDetailEyebrow,
   .geneticsDetailBody span,
   .conditionBody span,
@@ -2762,7 +2735,7 @@
     animation: none !important;
   }
 
-  .seedSelector,
+  .seedlingStory,
   .geneticsExperience,
   .geneticsIntro,
   .geneticsBridge,
@@ -2773,7 +2746,6 @@
   .geneticsDetailHelixPoint,
   .geneticsDetailClose,
   .geneticsActionOrbit,
-  .seedOptions button,
   .resultDetail,
   .resultOptions button {
     animation: none;

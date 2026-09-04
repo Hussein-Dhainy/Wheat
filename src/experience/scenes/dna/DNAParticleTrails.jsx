@@ -9,6 +9,7 @@ import {
 } from 'three'
 import { advanceActiveSceneTime } from '../../activeSceneTime.js'
 import { DNA_RENDER_CONFIG } from './dnaConfig.js'
+import { getGeneticsAmbientParticleOpacity } from '../../../config/geneticsSeeds.js'
 import trailParticleFragmentShader from './trailParticleFragment.glsl?raw'
 import trailParticleVertexShader from './trailParticleVertex.glsl?raw'
 
@@ -273,6 +274,7 @@ export default function DNAParticleTrails({
     uEmerald: { value: new Color('#22e596') },
     uPink: { value: new Color('#ff315f') },
     uPixelRatio: { value: 1 },
+    uSceneOpacity: { value: 1 },
     uScrollProgress: { value: 0 },
     uScrollAxisTravel: {
       value: new Vector2(...DNA_RENDER_CONFIG.particleFlow.trailAxisTravel),
@@ -299,6 +301,9 @@ export default function DNAParticleTrails({
       * DNA_RENDER_CONFIG.particleFlow.entryProgress
     materialReference.current.uniforms.uScrollProgress.value = (
       sceneProgress + entryFlowProgress
+    )
+    materialReference.current.uniforms.uSceneOpacity.value = (
+      getGeneticsAmbientParticleOpacity(sceneStateRef.current.progress ?? 0)
     )
 
     activeTime.current = advanceActiveSceneTime(

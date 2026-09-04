@@ -3,15 +3,15 @@ export const QUALITY_TIERS = ['low', 'medium', 'high']
 export const QUALITY_PROFILES = Object.freeze({
   high: Object.freeze({
     canvasDpr: Object.freeze([1, 1.5]),
-    compositorRenderScale: 0.85,
+    compositorRenderScale: 1,
   }),
   medium: Object.freeze({
     canvasDpr: Object.freeze([1, 1.25]),
-    compositorRenderScale: 0.76,
+    compositorRenderScale: 0.9,
   }),
   low: Object.freeze({
     canvasDpr: Object.freeze([1, 1]),
-    compositorRenderScale: 0.68,
+    compositorRenderScale: 0.78,
   }),
 })
 

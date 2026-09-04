@@ -7,7 +7,6 @@ export function ExperienceCanvas({
   entered,
   geneticsDetailOpen,
   onReady,
-  onSelectGeneticsSeed,
   onWarmupComplete,
   overlayRootRef,
   pointerRef,
@@ -18,7 +17,6 @@ export function ExperienceCanvas({
   resultInspectionOpen,
   resultInteractionRef,
   scrollRef,
-  selectedGeneticsSeed,
   selectedPredictionCondition,
   selectedResultView,
   webglSupported,
@@ -45,7 +43,6 @@ export function ExperienceCanvas({
         <SceneManager
           entered={entered}
           geneticsDetailOpen={geneticsDetailOpen}
-          onSelectGeneticsSeed={onSelectGeneticsSeed}
           onWarmupComplete={onWarmupComplete}
           overlayRootRef={overlayRootRef}
           pointerRef={pointerRef}
@@ -56,7 +53,6 @@ export function ExperienceCanvas({
           resultInspectionOpen={resultInspectionOpen}
           resultInteractionRef={resultInteractionRef}
           scrollRef={scrollRef}
-          selectedGeneticsSeed={selectedGeneticsSeed}
           selectedPredictionCondition={selectedPredictionCondition}
           selectedResultView={selectedResultView}
         />

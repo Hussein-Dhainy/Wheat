@@ -1,5 +1,6 @@
 uniform vec3 uDeepTeal;
 uniform vec3 uForestGreen;
+uniform float uSceneOpacity;
 
 varying float vColorMix;
 varying float vOpacity;
@@ -12,7 +13,7 @@ void main() {
   // sharply defined particle. The faint inner haze keeps the center soft.
   float outerFalloff = 1.0 - smoothstep(0.05, 1.0, distanceFromCenter);
   float haze = outerFalloff * outerFalloff;
-  float alpha = haze * vOpacity;
+  float alpha = haze * vOpacity * uSceneOpacity;
 
   if (alpha < 0.002) discard;
 

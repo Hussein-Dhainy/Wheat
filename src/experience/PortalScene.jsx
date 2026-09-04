@@ -5,7 +5,6 @@ export function PortalScene({
   entry,
   entered,
   geneticsDetailOpen,
-  onSelectGeneticsSeed,
   onSceneWarmupComplete,
   pointerRef,
   predictionTestsOpen,
@@ -15,7 +14,6 @@ export function PortalScene({
   resultInteractionRef,
   scene,
   sceneStateRef,
-  selectedGeneticsSeed,
   selectedPredictionCondition,
   selectedResultView,
 }) {
@@ -26,7 +24,6 @@ export function PortalScene({
       {...entry.sceneProps}
       entered={entered}
       geneticsDetailOpen={geneticsDetailOpen}
-      onSelectGeneticsSeed={onSelectGeneticsSeed}
       onSceneWarmupComplete={onSceneWarmupComplete}
       pointerRef={pointerRef}
       predictionTestsOpen={predictionTestsOpen}
@@ -35,7 +32,6 @@ export function PortalScene({
       resultInspectionOpen={resultInspectionOpen}
       resultInteractionRef={resultInteractionRef}
       sceneStateRef={sceneStateRef}
-      selectedGeneticsSeed={selectedGeneticsSeed}
       selectedPredictionCondition={selectedPredictionCondition}
       selectedResultView={selectedResultView}
     />,

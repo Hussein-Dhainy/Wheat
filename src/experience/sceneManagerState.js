@@ -1,7 +1,7 @@
 import { LinearFilter, WebGLRenderTarget } from 'three'
 import {
   crossedIntoGeneticsIntro,
-  GENETICS_SEED_TIMING,
+  GENETICS_GROWTH_TIMING,
   isGeneticsBridgeActive,
   isGeneticsIntroActive,
 } from '../config/geneticsSeeds.js'
@@ -27,6 +27,8 @@ export const GENETICS_BRIDGE_ENTER_EVENT = 'wheat:genetics-bridge-enter'
 export const GENETICS_BRIDGE_EXIT_EVENT = 'wheat:genetics-bridge-exit'
 export const GENETICS_INTRO_ENTER_EVENT = 'wheat:genetics-intro-enter'
 export const GENETICS_INTRO_EXIT_EVENT = 'wheat:genetics-intro-exit'
+export const SEEDLING_GROWTH_ENTER_EVENT = 'wheat:seedling-growth-enter'
+export const SEEDLING_GROWTH_EXIT_EVENT = 'wheat:seedling-growth-exit'
 
 export function createRenderTarget(name) {
   const target = new WebGLRenderTarget(1, 1, {
@@ -392,31 +394,46 @@ export function updateOverlayLayers(root, cache, transition) {
       ))
     }
 
-    const [carouselStart, carouselEnd] = (
-      GENETICS_SEED_TIMING.carouselRevealRange
+    const [growthStart, growthEnd] = (
+      GENETICS_GROWTH_TIMING.revealRange
     )
-    const carouselProgress = isCurrentGeneticsScene
+    const growthProgress = isCurrentGeneticsScene
       ? Math.max(
         0,
         Math.min(
           1,
-          (transition.sceneProgress - carouselStart)
-            / (carouselEnd - carouselStart),
+          (transition.sceneProgress - growthStart)
+            / (growthEnd - growthStart),
         ),
       )
       : 0
-    const carouselIsActive = isCurrentGeneticsScene
-      && transition.sceneProgress >= carouselStart
+    const growthIsActive = isCurrentGeneticsScene
+      && transition.sceneProgress >= growthStart
+    const growthWasActive = layer.dataset.seedlingGrowthActive === 'true'
     updateDataset(
       layer,
-      'seedCarouselActive',
-      carouselIsActive ? 'true' : 'false',
+      'seedlingGrowthActive',
+      growthIsActive ? 'true' : 'false',
     )
-    updateStyleProperty(layer, '--seed-carousel-progress', carouselProgress)
+    if (growthIsActive !== growthWasActive) {
+      layer.dispatchEvent(new CustomEvent(
+        growthIsActive
+          ? SEEDLING_GROWTH_ENTER_EVENT
+          : SEEDLING_GROWTH_EXIT_EVENT,
+        {
+          detail: {
+            progress: transition.sceneProgress,
+            sceneId: SCENE_REGISTRY[index].id,
+            sceneIndex: index,
+          },
+        },
+      ))
+    }
+    updateStyleProperty(layer, '--seedling-growth-progress', growthProgress)
     updateStyleProperty(
       layer,
-      '--seed-carousel-offset',
-      `${(1 - carouselProgress) * 1.5}rem`,
+      '--seedling-growth-offset',
+      `${(1 - growthProgress) * 1.5}rem`,
     )
   })
 

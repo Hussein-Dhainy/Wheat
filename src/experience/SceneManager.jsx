@@ -15,6 +15,7 @@ import {
   createOverlayUpdateSignature,
   createWarmupTracker,
   getCompositorRenderTargetSize,
+  renderSceneForWarmup,
 } from './sceneManagerPerformance.js'
 import {
   DIAGONAL_TRANSITION,
@@ -47,7 +48,6 @@ if (
 export function SceneManager({
   entered,
   geneticsDetailOpen,
-  onSelectGeneticsSeed,
   onWarmupComplete,
   overlayRootRef,
   pointerRef,
@@ -58,7 +58,6 @@ export function SceneManager({
   resultInspectionOpen,
   resultInteractionRef,
   scrollRef,
-  selectedGeneticsSeed,
   selectedPredictionCondition,
   selectedResultView,
 }) {
@@ -171,8 +170,15 @@ export function SceneManager({
     gl.autoClear = true
 
     portalScenes.forEach((scene, index) => {
-      gl.setRenderTarget(warmupTarget)
-      gl.render(scene, portalCameras[index])
+      // Staged assets can begin outside the camera frustum. Include them in
+      // this tiny pass so shaders, buffers, and textures cannot initialize
+      // mid-scroll on their first visible frame.
+      renderSceneForWarmup(
+        gl,
+        scene,
+        portalCameras[index],
+        warmupTarget,
+      )
     })
 
     gl.setRenderTarget(previousRenderTarget)
@@ -321,7 +327,6 @@ export function SceneManager({
           entered={entered}
           entry={entry}
           geneticsDetailOpen={geneticsDetailOpen}
-          onSelectGeneticsSeed={onSelectGeneticsSeed}
           onSceneWarmupComplete={warmupTracker.markComplete}
           pointerRef={pointerRef}
           predictionTestsOpen={predictionTestsOpen}
@@ -331,7 +336,6 @@ export function SceneManager({
           resultInteractionRef={resultInteractionRef}
           scene={portalScenes[index]}
           sceneStateRef={sceneStateRefs[index]}
-          selectedGeneticsSeed={selectedGeneticsSeed}
           selectedPredictionCondition={selectedPredictionCondition}
           selectedResultView={selectedResultView}
         />

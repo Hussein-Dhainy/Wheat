@@ -1,5 +1,4 @@
 import { WHEAT_GRAIN_ASSET } from '../../systems/wheatGrain.js'
-import { assetUrl } from '../../../config/assetBase.js'
 
 export const DNA_QUALITY_PROFILES = Object.freeze({
   high: Object.freeze({
@@ -152,65 +151,6 @@ export const DNA_RENDER_CONFIG = {
       opacity: 0.22,
       pulseAmount: 0.045,
       sizeScale: 2.05,
-    },
-  },
-  seeds: {
-    count: 18,
-    modelUrl: assetUrl('genetics/EditedWheatSeeds.glb'),
-    sizeRange: [0.56, 0.86],
-    horizontalRange: 2.65,
-    depthRange: [-1.25, 1.35],
-    streamScrollRange: [0.42, 0.8],
-    streamTravel: 17,
-    transitionTravel: 2.2,
-    streamYRange: [-3.5, -13.5],
-    streamRotationSpeed: [0.06, 0.16],
-    carousel: {
-      interactionStartProgress: 0.72,
-      center: [-1.2, -0.05, 0],
-      radius: 1.35,
-      seedSize: 1.5,
-      rotationDamping: 5.5,
-      individualRotationSpeed: [0.1, 0.16],
-      rearScale: 0.68,
-      frontScale: 1.05,
-      ring: {
-        color: '#fffdf4',
-        coreOpacity: 0.42,
-        coreTubeRadius: 0.0045,
-        haloFalloffPower: 2.6,
-        haloOpacity: 0.025,
-        haloPointCount: 144,
-        haloPointSize: 18,
-      },
-    },
-    material: {
-      roughness: 0.52,
-      normalScale: 0.7,
-      openTint: '#f0c15f',
-      semiOpenTint: '#f3c868',
-      closedTint: '#ffd574',
-      selectedTint: '#ffd58a',
-      selectedEmissive: '#ffc04f',
-      baseEmissiveIntensity: 0.04,
-      selectedEmissiveIntensity: 0.16,
-    },
-    lighting: {
-      hemisphere: {
-        skyColor: '#58cdb2',
-        groundColor: '#5b2c17',
-        intensity: 0.5,
-      },
-      warmKey: {
-        color: '#ffb765',
-        intensity: 3.2,
-        position: [-3, 5, 4],
-      },
-      tealRim: {
-        color: '#55cdb0',
-        intensity: 0.9,
-        position: [4, 0, -3],
-      },
     },
   },
 }

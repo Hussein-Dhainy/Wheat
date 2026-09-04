@@ -1,13 +1,10 @@
-import {
-  DEFAULT_GENETICS_SEED_ID,
-  GENETICS_SEED_OPTIONS,
-} from '../../config/geneticsSeeds.js'
 import { TitleParticleText } from '../components/TitleParticleText/TitleParticleText.jsx'
 import { FieldIntro } from './FieldIntro.jsx'
 import { GeneticsBridgeTitle } from './GeneticsBridgeTitle.jsx'
 import { GeneticsIntro } from './GeneticsIntro.jsx'
 import { PredictionIntro } from './PredictionIntro.jsx'
 import { ResultExperience } from './ResultExperience.jsx'
+import { SeedlingStoryTitle } from './SeedlingStoryTitle.jsx'
 import {
   BOLD_TITLE_FONT_SIZE,
   BOLD_TITLE_FONT_WEIGHT,
@@ -29,14 +26,12 @@ export function PlaceholderOverlay({
   predictionTestsOpen,
   resultInspectionOpen,
   resultInteractionRef,
-  selectedGeneticsSeed,
   selectedPredictionCondition,
   selectedResultClosingAction,
   selectedResultView,
   setPredictionTestsOpen,
   setGeneticsDetailOpen,
   setResultInspectionOpen,
-  setSelectedGeneticsSeed,
   setSelectedPredictionCondition,
   setSelectedResultClosingAction,
   setSelectedResultView,
@@ -45,11 +40,6 @@ export function PlaceholderOverlay({
   const label = section?.label ?? entry.label
   const description = section?.description ?? entry.description
   const hidesPlaceholderContent = entry.id === 'prediction' || entry.id === 'result'
-  const selectedSeed = GENETICS_SEED_OPTIONS.find(
-    (option) => option.id === selectedGeneticsSeed,
-  ) ?? GENETICS_SEED_OPTIONS.find(
-    (option) => option.id === DEFAULT_GENETICS_SEED_ID,
-  )
 
   return (
     <section
@@ -129,27 +119,7 @@ export function PlaceholderOverlay({
 
           <GeneticsBridgeTitle fallback={fallback} />
 
-          <div className={styles.seedSelector}>
-            <div className={styles.seedCopy}>
-              <p className={styles.eyebrow}>Explore the candidates</p>
-              <h3>{selectedSeed.label}</h3>
-              <p aria-live="polite">{selectedSeed.description}</p>
-            </div>
-
-            <div className={styles.seedOptions} aria-label="Seed views">
-              {GENETICS_SEED_OPTIONS.map((option, optionIndex) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  aria-pressed={option.id === selectedSeed.id}
-                  onClick={() => setSelectedGeneticsSeed(option.id)}
-                >
-                  <span>{String(optionIndex + 1).padStart(2, '0')}</span>
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <SeedlingStoryTitle fallback={fallback} />
         </>
       )}
 

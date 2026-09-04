@@ -17,8 +17,12 @@ import helixNodeVertexShader from './helixNodeVertex.glsl?raw'
 
 const IDLE_ROTATION_SPEED = -0.085
 const SCROLL_ROTATION = Math.PI * 1.65
-const SCROLL_TRAVEL = 12
+// The node chain is finite. This travel is long enough for its authored tail
+// to clear the viewport during the Scene 2 -> 3 transition without recycling.
+const SCROLL_TRAVEL = 16
 const LINK_SPACING = 0.14
+const NODE_CHAIN_HEAD_Y = -3.35
+const NODE_CHAIN_LENGTH_SCALE = 0.75
 
 // Each inner array is one linked cluster. Keeping these groups explicit makes
 // the four-node limit structural rather than an accidental visual outcome.
@@ -50,7 +54,8 @@ const NODE_GROUPS = [
 function getNodePosition(node) {
   return [
     Math.cos(node.angle) * node.radius,
-    node.y,
+    NODE_CHAIN_HEAD_Y
+      + (node.y - NODE_CHAIN_HEAD_Y) * NODE_CHAIN_LENGTH_SCALE,
     Math.sin(node.angle) * node.radius,
   ]
 }

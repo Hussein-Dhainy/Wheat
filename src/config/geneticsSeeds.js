@@ -1,38 +1,69 @@
-// Provisional editorial copy for the three Scene 2 model views. Keeping this
-// beside the option IDs lets the HTML controls and WebGL carousel share one
-// source of truth while the final story copy is still being written.
-export const GENETICS_SEED_OPTIONS = [
-  {
-    id: 'open',
-    label: 'Open seed',
-    meshName: 'Open_Seed_LowPoly',
-    heroMeshName: 'Open_Seed',
-    description: 'An expanded view reveals the seed\u2019s layered construction.',
-  },
-  {
-    id: 'semiOpen',
-    label: 'Semi-open seed',
-    meshName: 'Semi_Open_Seed_LowPoly',
-    heroMeshName: 'Semi_Open_Seed',
-    description: 'A partial view brings the internal form and outer shell together.',
-  },
-  {
-    id: 'closed',
-    label: 'Closed seed',
-    meshName: 'Closed_Seed_LowPoly',
-    heroMeshName: 'Closed_Seed',
-    description: 'The complete grain returns the focus to the selected candidate.',
-  },
-]
+// The breeder-refinement beat takes over after the editorial bridge. Its GLB
+// animation is sampled directly from progress so reverse scrolling rewinds it.
+export const GENETICS_GROWTH_TIMING = {
+  ambientParticleFadeRange: [0.75, 0.84],
+  ambientParticleFinalOpacity: 0.1,
+  entryRange: [0.75, 0.98],
+  revealRange: [0.75, 0.81],
+  animationRange: [0.85, 0.98],
+  titleFadeDurationMs: 520,
+}
 
-export const DEFAULT_GENETICS_SEED_ID = 'closed'
+export const GENETICS_SEEDLING_LIGHTING = {
+  hemisphere: {
+    skyColor: '#244b45',
+    groundColor: '#0d0705',
+    intensity: 0.3,
+  },
+  warmKey: {
+    color: '#ffd39a',
+    intensity: 34,
+    position: [-3.8, 4.8, 4.5],
+    angle: 0.52,
+    penumbra: 0.78,
+    distance: 14,
+    decay: 1.35,
+  },
+  blueRim: {
+    color: '#54a9cf',
+    intensity: 1.15,
+    position: [-5, 0.8, 3.2],
+  },
+  tealBacklight: {
+    color: '#59d9bd',
+    intensity: 0.55,
+    position: [4, 3, -4],
+  },
+  seedHighlight: {
+    color: '#ffe0a8',
+    intensity: 48,
+    distance: 8,
+    decay: 1.4,
+    xOffset: 2.7,
+    height: 1.42,
+    zOffset: 2.1,
+  },
+  targetHeight: 1.25,
+  grounding: {
+    color: '#050302',
+    opacity: 0.3,
+    y: -0.012,
+  },
+}
 
-// Shared by the WebGL reveal and its HTML controls so neither layer becomes
-// interactive before the other is visible. The reveal now finishes exactly
-// at the scene's own end (1) instead of leaving dead scroll room between a
-// fully revealed carousel and the transition into Scene 3.
-export const GENETICS_SEED_TIMING = {
-  carouselRevealRange: [0.8, 1],
+export const GENETICS_SEEDLING_MODEL = {
+  // The model is rotated -90deg around Y at runtime, so negative local X
+  // pushes the living plant assembly away from the camera and into the soil.
+  plantDepthOffset: -0.035,
+}
+
+export function getGeneticsAmbientParticleOpacity(progress) {
+  const [start, end] = GENETICS_GROWTH_TIMING.ambientParticleFadeRange
+  const normalized = Math.min(1, Math.max(0, (progress - start) / (end - start)))
+  const eased = normalized * normalized * (3 - 2 * normalized)
+  return 1 + (
+    GENETICS_GROWTH_TIMING.ambientParticleFinalOpacity - 1
+  ) * eased
 }
 
 export const GENETICS_INTRO_TIMING = {

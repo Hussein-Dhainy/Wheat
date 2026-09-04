@@ -6,7 +6,6 @@ import {
   PRELOADER_MINIMUM_VISIBLE_MS,
 } from '../config/preloader.js'
 import { SCENE_TIMELINE } from '../config/sceneTimeline.js'
-import { DEFAULT_GENETICS_SEED_ID } from '../config/geneticsSeeds.js'
 import {
   DEFAULT_PREDICTION_CONDITION_ID,
   PREDICTION_TEST_AUTO_SELECT_DELAY_MS,
@@ -21,6 +20,7 @@ import { useQualityTier } from '../hooks/useQualityTier.js'
 import { useReducedMotion } from '../hooks/useReducedMotion.js'
 import { useVirtualSceneScroll } from '../hooks/useVirtualSceneScroll.js'
 import { SceneOverlays } from '../story/SceneOverlays/SceneOverlays.jsx'
+import { ChapterProgress } from '../ui/ChapterProgress/ChapterProgress.jsx'
 import { MenuOverlay } from '../ui/Menu/MenuOverlay.jsx'
 import { Navbar } from '../ui/Navbar/Navbar.jsx'
 import { Preloader } from '../ui/Preloader/Preloader.jsx'
@@ -39,9 +39,6 @@ export function App() {
       && (warmupComplete || warmupTimedOut))
   const [landingEntered, setLandingEntered] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [selectedGeneticsSeed, setSelectedGeneticsSeed] = useState(
-    DEFAULT_GENETICS_SEED_ID,
-  )
   const [geneticsDetailOpen, setGeneticsDetailOpen] = useState(false)
   const [predictionTestsOpen, setPredictionTestsOpen] = useState(false)
   const [selectedPredictionCondition, setSelectedPredictionCondition] = useState(
@@ -144,7 +141,6 @@ export function App() {
           entered={landingEntered}
           geneticsDetailOpen={geneticsDetailOpen}
           onReady={handleCanvasReady}
-          onSelectGeneticsSeed={setSelectedGeneticsSeed}
           onWarmupComplete={handleWarmupComplete}
           overlayRootRef={overlayRootRef}
           pointerRef={pointerRef}
@@ -152,7 +148,6 @@ export function App() {
           reducedMotion={reducedMotion}
           reportPerformanceSample={reportPerformanceSample}
           scrollRef={virtualScrollRef}
-          selectedGeneticsSeed={selectedGeneticsSeed}
           predictionTestsOpen={predictionTestsOpen}
           resultInspectionOpen={resultInspectionOpen}
           resultInteractionRef={resultInteractionRef}
@@ -168,7 +163,6 @@ export function App() {
           predictionTestsOpen={predictionTestsOpen}
           resultInspectionOpen={resultInspectionOpen}
           resultInteractionRef={resultInteractionRef}
-          selectedGeneticsSeed={selectedGeneticsSeed}
           selectedPredictionCondition={selectedPredictionCondition}
           selectedResultClosingAction={selectedResultClosingAction}
           selectedResultView={selectedResultView}
@@ -177,8 +171,12 @@ export function App() {
           setSelectedResultView={setSelectedResultView}
           setPredictionTestsOpen={setPredictionTestsOpen}
           setGeneticsDetailOpen={setGeneticsDetailOpen}
-          setSelectedGeneticsSeed={setSelectedGeneticsSeed}
           setSelectedPredictionCondition={setSelectedPredictionCondition}
+        />
+        <ChapterProgress
+          reducedMotion={reducedMotion}
+          scrollRef={virtualScrollRef}
+          visible={landingEntered && !webglFallback}
         />
       </div>
       <Navbar

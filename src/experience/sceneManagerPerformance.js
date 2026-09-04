@@ -1,5 +1,28 @@
 export const COMPOSITOR_RENDER_SCALE = 0.85
 
+export function renderSceneForWarmup(renderer, scene, camera, renderTarget) {
+  const culledRenderables = []
+
+  scene.traverse((object) => {
+    if (
+      object.frustumCulled
+      && (object.isMesh || object.isPoints || object.isLine)
+    ) {
+      culledRenderables.push(object)
+      object.frustumCulled = false
+    }
+  })
+
+  try {
+    renderer.setRenderTarget(renderTarget)
+    renderer.render(scene, camera)
+  } finally {
+    culledRenderables.forEach((object) => {
+      object.frustumCulled = true
+    })
+  }
+}
+
 export function createWarmupTracker(requiredStages, onComplete) {
   const pendingStages = new Set(requiredStages)
   let completionReported = false

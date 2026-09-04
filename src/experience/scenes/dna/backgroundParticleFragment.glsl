@@ -1,6 +1,7 @@
 uniform vec3 uDarkTeal;
 uniform vec3 uEmerald;
 uniform vec3 uPink;
+uniform float uSceneOpacity;
 
 varying float vColorMix;
 varying float vOpacity;
@@ -16,7 +17,7 @@ void main() {
   vec3 greenColor = mix(uDarkTeal, uEmerald, emeraldAmount);
   vec3 particleColor = mix(greenColor, uPink, pinkAmount);
 
-  float alpha = softBody * vOpacity;
+  float alpha = softBody * vOpacity * uSceneOpacity;
   if (alpha < 0.01) discard;
 
   gl_FragColor = vec4(particleColor + centerGlow * 0.12, alpha);

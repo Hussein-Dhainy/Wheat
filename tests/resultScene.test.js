@@ -100,6 +100,13 @@ test('grain inspection uses a deliberately slow visual transition', () => {
   assert.equal(RESULT_SCENE_CONFIG.inspection.transitionDamping, 1.4)
   assert.ok(RESULT_SCENE_CONFIG.inspection.grainZoom > 1)
   assert.ok(RESULT_SCENE_CONFIG.inspection.grainZoom <= 1.1)
+  assert.ok(RESULT_SCENE_CONFIG.inspection.desktopFocusOffset[2] > 0)
+  assert.ok(RESULT_SCENE_CONFIG.inspection.mobileFocusOffset[2] > 0)
+  assert.ok(RESULT_SCENE_CONFIG.inspection.desktopFocusOffset[0] <= 0)
+  assert.ok(Math.max(
+    ...RESULT_SCENE_CONFIG.inspection.viewFocusOffsets.map(([x]) => Math.abs(x)),
+  ) <= 0.03)
+  assert.equal(RESULT_SCENE_CONFIG.inspection.viewFocusOffsets.length, 3)
 })
 
 test('grain rotation snaps to the closest of three repeatable views', () => {

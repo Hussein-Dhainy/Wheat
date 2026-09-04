@@ -1,6 +1,7 @@
 uniform vec3 uDeepGreen;
 uniform vec3 uEmerald;
 uniform vec3 uPink;
+uniform float uSceneOpacity;
 
 varying float vColorMix;
 varying float vOpacity;
@@ -15,7 +16,7 @@ void main() {
   float pinkAmount = smoothstep(0.94, 0.985, vColorMix);
   vec3 greenColor = mix(uDeepGreen, uEmerald, emeraldAmount);
   vec3 particleColor = mix(greenColor, uPink, pinkAmount);
-  float alpha = body * vOpacity;
+  float alpha = body * vOpacity * uSceneOpacity;
 
   if (alpha < 0.01) discard;
 

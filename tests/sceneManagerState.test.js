@@ -6,6 +6,7 @@ import {
   createOverlayUpdateSignature,
   createWarmupTracker,
   getCompositorRenderTargetSize,
+  renderSceneForWarmup,
 } from '../src/experience/sceneManagerPerformance.js'
 
 function createTransition(overrides = {}) {
@@ -77,4 +78,50 @@ test('preloader warm-up waits for main scenes and the private prediction backdro
   assert.equal(completionCount, 1)
   assert.equal(tracker.markComplete('prediction-backdrop'), false)
   assert.equal(completionCount, 1)
+})
+
+test('scene warm-up renders off-camera objects and restores their culling', () => {
+  const mesh = { frustumCulled: true, isMesh: true }
+  const points = { frustumCulled: true, isPoints: true }
+  const group = { frustumCulled: true }
+  const scene = {
+    traverse(callback) {
+      ;[mesh, points, group].forEach(callback)
+    },
+  }
+  const camera = {}
+  const renderTarget = {}
+  let observedDuringRender
+  const renderer = {
+    render(renderedScene, renderedCamera) {
+      assert.equal(renderedScene, scene)
+      assert.equal(renderedCamera, camera)
+      observedDuringRender = [mesh.frustumCulled, points.frustumCulled]
+    },
+    setRenderTarget(target) {
+      assert.equal(target, renderTarget)
+    },
+  }
+
+  renderSceneForWarmup(renderer, scene, camera, renderTarget)
+
+  assert.deepEqual(observedDuringRender, [false, false])
+  assert.equal(mesh.frustumCulled, true)
+  assert.equal(points.frustumCulled, true)
+  assert.equal(group.frustumCulled, true)
+})
+
+test('scene warm-up restores culling when rendering throws', () => {
+  const mesh = { frustumCulled: true, isMesh: true }
+  const scene = { traverse: (callback) => callback(mesh) }
+  const renderer = {
+    render() { throw new Error('warm-up failed') },
+    setRenderTarget() {},
+  }
+
+  assert.throws(
+    () => renderSceneForWarmup(renderer, scene, {}, {}),
+    /warm-up failed/,
+  )
+  assert.equal(mesh.frustumCulled, true)
 })

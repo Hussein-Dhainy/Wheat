@@ -1,0 +1,21 @@
+{
+  "asset": "/models/seedling/WheatSeedlingGrowth-web.glb",
+  "animation": "Scene",
+  "durationSeconds": 4.25,
+  "sourceFrameRange": [1, 102],
+  "sourceFps": 24,
+  "interactiveLeafNode": "Wheat_Shoot_Unified",
+  "shootNode": "Wheat_Shoot_Unified",
+  "backgroundPotNodes": [
+    "BG_Pot_Left_LOD",
+    "BG_Soil_Left_LOD",
+    "BG_Shoot_Left_LOD",
+    "BG_Pot_Right_LOD",
+    "BG_Soil_Right_LOD",
+    "BG_Shoot_Right_LOD"
+  ],
+  "runtimeLeafBend": {
+    "enabled": false,
+    "note": "Reserved for the later pointer-driven bend implementation. Keep the base fixed and deform toward the tip."
+  }
+}
